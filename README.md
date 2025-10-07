@@ -1,94 +1,111 @@
-# 10x Astro Starter
+# Expense Tracker Web App
 
-A modern, opinionated starter template for building fast, accessible, and AI-friendly web applications.
+[![version](https://img.shields.io/badge/version-0.0.1-blue)](https://github.com/your-org/your-repo/releases)  
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+A responsive web application that simplifies personal expense tracking by replacing traditional spreadsheets with an intuitive, centralized platform. Built with Astro, React, and Supabase, this app provides secure user authentication and real-time balance updates.
+
+## Table of Contents
+
+1. [Tech Stack](#tech-stack)  
+2. [Getting Started](#getting-started)  
+3. [Available Scripts](#available-scripts)  
+4. [Project Scope](#project-scope)  
+   - [In Scope (MVP)](#in-scope-mvp)  
+   - [Out of Scope](#out-of-scope)  
+5. [Project Status](#project-status)  
+6. [License](#license)  
 
 ## Tech Stack
 
-- [Astro](https://astro.build/) v5.5.5 - Modern web framework for building fast, content-focused websites
-- [React](https://react.dev/) v19.0.0 - UI library for building interactive components
-- [TypeScript](https://www.typescriptlang.org/) v5 - Type-safe JavaScript
-- [Tailwind CSS](https://tailwindcss.com/) v4.0.17 - Utility-first CSS framework
-
-## Prerequisites
-
-- Node.js v22.14.0 (as specified in `.nvmrc`)
-- npm (comes with Node.js)
+- **TypeScript**  
+- **Astro**  
+- **React**  
+- **Tailwind CSS**  
+- **Supabase** (Authentication & Database)
 
 ## Getting Started
 
-1. Clone the repository:
+### Prerequisites
+
+- **Node.js** v22.14.0 (use `.nvmrc` or [nvm](https://github.com/nvm-sh/nvm))
+- **npm** (bundled with Node)
+- Create a `.env` file in the project root with your Supabase credentials:
+  ```bash
+  SUPABASE_URL=your_supabase_url
+  SUPABASE_ANON_KEY=your_supabase_anon_key
+  ```
+
+### Installation
 
 ```bash
-git clone https://github.com/przeprogramowani/10x-astro-starter.git
-cd 10x-astro-starter
-```
-
-2. Install dependencies:
-
-```bash
+git clone https://github.com/your-org/your-repo.git
+cd your-repo
 npm install
 ```
 
-3. Run the development server:
+### Running Locally
+
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-4. Build for production:
-
-```bash
-npm run build
-```
+Open your browser at [http://localhost:3000](http://localhost:3000) to view the app.
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Fix ESLint issues
+In the project directory, you can run:
 
-## Project Structure
+- `npm run dev`  
+  Start Astro in development mode with hot-reload.
 
-```md
-.
-├── src/
-│   ├── layouts/    # Astro layouts
-│   ├── pages/      # Astro pages
-│   │   └── api/    # API endpoints
-│   ├── components/ # UI components (Astro & React)
-│   └── assets/     # Static assets
-├── public/         # Public assets
-```
+- `npm run build`  
+  Build the app for production.
 
-## AI Development Support
+- `npm run preview`  
+  Preview the production build locally.
 
-This project is configured with AI development tools to enhance the development experience, providing guidelines for:
+- `npm run astro`  
+  Run Astro CLI commands.
 
-- Project structure
-- Coding practices
-- Frontend development
-- Styling with Tailwind
-- Accessibility best practices
-- Astro and React guidelines
+- `npm run lint`  
+  Run ESLint to check for code issues.
 
-### Cursor IDE
+- `npm run lint:fix`  
+  Run ESLint with auto-fix.
 
-The project includes AI rules in `.cursor/rules/` directory that help Cursor IDE understand the project structure and provide better code suggestions.
+- `npm run format`  
+  Format code with Prettier.
 
-### GitHub Copilot
+## Project Scope
 
-AI instructions for GitHub Copilot are available in `.github/copilot-instructions.md`
+### In Scope (MVP)
 
-### Windsurf
+- Responsive web application accessible on modern browsers  
+- User registration, login, and password reset via Supabase  
+- Secure storage of user data (accounts, categories, transactions)  
+- CRUD operations for:
+  - **Accounts** (name, currency; real-time balance)
+  - **Categories** (Income vs. Expense)
+  - **Transactions** (date, account, category, amount, optional comment)
+- Transaction list with sorting (newest first) and multi-criteria filtering  
+- Monthly expense summary per category with navigation controls  
 
-The `.windsurfrules` file contains AI configuration for Windsurf.
+### Out of Scope
 
-## Contributing
+- Native mobile applications (iOS/Android)  
+- Sharing accounts or data between users  
+- Importing/exporting data (CSV, QIF)  
+- Advanced budgeting/financial planning features  
+- Dedicated transfers feature (handled as separate transactions)  
+- Automatic currency conversion  
 
-Please follow the AI guidelines and coding practices defined in the AI configuration files when contributing to this project.
+## Project Status
+
+🚧 MVP in active development. Features and API may change. Contributions welcome!
 
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
