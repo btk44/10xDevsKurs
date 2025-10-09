@@ -90,8 +90,8 @@ create index idx_transactions_category_month on transactions(category_id, transa
 
 -- composite index for monthly summary optimization (current month)
 -- this partial index covers only current month for better performance
-create index idx_transactions_monthly on transactions(user_id, transaction_date, category_id) 
-  where active = true and transaction_date >= date_trunc('month', current_date);
+-- create index idx_transactions_monthly on transactions(user_id, transaction_date, category_id) 
+--  where active = true and transaction_date >= date_trunc('month', current_date);
 
 -- full-text search index for comment field (using simple dictionary)
 create index idx_transactions_comment_fts on transactions using gin(to_tsvector('simple', comment));
