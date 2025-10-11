@@ -56,6 +56,7 @@ export const GetAccountsQuerySchema = z.object({
 
 /**
  * Schema for validating CreateCategoryCommand
+ * Validates category creation request data according to business rules
  */
 export const CreateCategoryCommandSchema = z.object({
   name: z
@@ -63,16 +64,18 @@ export const CreateCategoryCommandSchema = z.object({
     .min(1, "Name cannot be empty")
     .max(100, "Name cannot exceed 100 characters")
     .transform((val) => val.trim()),
-  category_type: z.enum(["income", "expense"], {
-    required_error: "Category type is required",
-    invalid_type_error: "Category type must be either 'income' or 'expense'",
-  }),
-  parent_id: z.number().int("Parent ID must be an integer").positive("Parent ID must be a positive integer").optional(),
+  category_type: z
+    .enum(["income", "expense"], {
+      invalid_type_error: "Category type must be either 'income' or 'expense'",
+    })
+    .default("expense"),
+  parent_id: z.number().int("Parent ID must be an integer").gte(0, "Parent ID must be >= 0").default(0),
   tag: z.string().max(10, "Tag cannot exceed 10 characters").optional(),
 });
 
 /**
  * Schema for validating UpdateCategoryCommand
+ * All fields are optional for partial updates
  */
 export const UpdateCategoryCommandSchema = z.object({
   name: z
@@ -86,8 +89,8 @@ export const UpdateCategoryCommandSchema = z.object({
       invalid_type_error: "Category type must be either 'income' or 'expense'",
     })
     .optional(),
-  parent_id: z.number().int("Parent ID must be an integer").positive("Parent ID must be a positive integer").optional(),
-  tag: z.string().max(10, "Tag cannot exceed 10 characters").optional(),
+  parent_id: z.number().int("Parent ID must be an integer").min(0, "Parent ID must be >= 0").optional(),
+  tag: z.string().max(10, "Tag cannot exceed 10 characters").nullable().optional(),
 });
 
 /**
@@ -98,7 +101,7 @@ export const GetCategoriesQuerySchema = z.object({
   parent_id: z
     .string()
     .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive())
+    .pipe(z.number().int().gte(0, "Parent ID must be >= 0"))
     .optional(),
   include_inactive: z
     .string()
@@ -126,12 +129,16 @@ export const CreateTransactionCommandSchema = z.object({
     .number({ required_error: "Category ID is required" })
     .int("Category ID must be an integer")
     .positive("Category ID must be a positive integer"),
-  amount: z.number({ required_error: "Amount is required" }).positive("Amount must be positive"),
+  amount: z
+    .number({ required_error: "Amount is required" })
+    .positive("Amount must be positive")
+    .max(9999999999.99, "Amount cannot exceed 9999999999.99")
+    .multipleOf(0.01, "Amount must have at most 2 decimal places"),
   currency_id: z
     .number({ required_error: "Currency ID is required" })
     .int("Currency ID must be an integer")
     .positive("Currency ID must be a positive integer"),
-  comment: z.string().max(500, "Comment cannot exceed 500 characters").optional(),
+  comment: z.string().max(255, "Comment cannot exceed 255 characters").optional(),
 });
 
 /**
@@ -160,37 +167,54 @@ export const UpdateTransactionCommandSchema = z.object({
 
 /**
  * Schema for validating GetTransactionsQuery parameters
+ * Supports filtering, sorting, pagination, and search functionality
  */
 export const GetTransactionsQuerySchema = z.object({
-  date_from: z.string().datetime("Date from must be a valid ISO datetime").optional(),
-  date_to: z.string().datetime("Date to must be a valid ISO datetime").optional(),
+  date_from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date from must be in YYYY-MM-DD format")
+    .optional(),
+  date_to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date to must be in YYYY-MM-DD format")
+    .optional(),
   account_id: z
     .string()
     .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive())
+    .pipe(z.number().int().positive("Account ID must be a positive integer"))
     .optional(),
   category_id: z
     .string()
     .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive())
+    .pipe(z.number().int().positive("Category ID must be a positive integer"))
     .optional(),
-  search: z.string().min(1, "Search term cannot be empty").optional(),
-  sort: z.enum(["transaction_date:asc", "transaction_date:desc", "amount:asc", "amount:desc"]).optional(),
+  search: z
+    .string()
+    .min(1, "Search term cannot be empty")
+    .max(100, "Search term cannot exceed 100 characters")
+    .transform((val) => val.trim())
+    .optional(),
+  sort: z
+    .enum(["transaction_date:asc", "transaction_date:desc", "amount:asc", "amount:desc"])
+    .default("transaction_date:desc"),
   page: z
     .string()
     .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive())
-    .optional(),
+    .pipe(z.number().int().positive("Page must be a positive integer"))
+    .default("1")
+    .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val)),
   limit: z
     .string()
     .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive().max(100))
-    .optional(),
+    .pipe(z.number().int().positive("Limit must be a positive integer").max(100, "Limit cannot exceed 100"))
+    .default("50")
+    .transform((val) => (typeof val === "string" ? parseInt(val, 10) : val)),
   include_inactive: z
     .string()
     .transform((val) => val === "true")
     .pipe(z.boolean())
-    .optional(),
+    .default("false")
+    .transform((val) => (typeof val === "string" ? val === "true" : val)),
 });
 
 // ============================================================================
