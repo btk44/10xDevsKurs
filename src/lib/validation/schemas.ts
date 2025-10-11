@@ -256,3 +256,11 @@ export const BooleanQueryParamSchema = z
   .string()
   .transform((val) => val === "true")
   .pipe(z.boolean());
+
+/**
+ * Schema for validating DELETE /api/transactions/:id parameters
+ * Ensures transaction ID is a positive integer
+ */
+export const DeleteTransactionParamsSchema = z.object({
+  id: IdParamSchema,
+});

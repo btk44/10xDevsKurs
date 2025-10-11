@@ -2,6 +2,7 @@ import type { supabaseClient } from "../../db/supabase.client";
 import type {
   TransactionDTO,
   CreateTransactionCommand,
+  UpdateTransactionCommand,
   GetTransactionsQuery,
   ApiCollectionResponse,
   PaginationDTO,
@@ -184,6 +185,178 @@ export class TransactionService {
   }
 
   /**
+   * Update an existing transaction
+   * @param command - The transaction update command with validated data
+   * @param id - The transaction ID to update
+   * @param userId - The user ID who owns the transaction (defaults to DEFAULT_USER_ID)
+   * @returns Promise<TransactionDTO> - The updated transaction with joined data
+   * @throws Error if validation fails or database operation fails
+   */
+  async updateTransaction(
+    command: UpdateTransactionCommand,
+    id: number,
+    userId: string = DEFAULT_USER_ID
+  ): Promise<TransactionDTO> {
+    try {
+      // Validate ID parameter
+      SecurityUtils.validateNumericId(id, "transaction_id");
+
+      // Additional security validation beyond schema validation
+      if (command.account_id !== undefined) {
+        SecurityUtils.validateNumericId(command.account_id, "account_id");
+      }
+      if (command.category_id !== undefined) {
+        SecurityUtils.validateNumericId(command.category_id, "category_id");
+      }
+      if (command.currency_id !== undefined) {
+        SecurityUtils.validateNumericId(command.currency_id, "currency_id");
+      }
+      if (command.amount !== undefined) {
+        SecurityUtils.validateAmount(command.amount);
+      }
+      if (command.transaction_date !== undefined) {
+        SecurityUtils.validateTransactionDate(command.transaction_date);
+      }
+
+      // Sanitize optional comment field
+      const sanitizedComment =
+        command.comment !== undefined ? SecurityUtils.sanitizeString(command.comment) : undefined;
+
+      // First, verify the transaction exists and belongs to the user
+      const { data: existingTransaction, error: fetchError } = await this.supabase
+        .from("transactions")
+        .select("id, user_id")
+        .eq("id", id)
+        .eq("user_id", userId)
+        .eq("active", true)
+        .single();
+
+      if (fetchError || !existingTransaction) {
+        if (fetchError?.code === "PGRST116") {
+          throw new Error("Transaction not found or access denied");
+        }
+        throw new Error(`Failed to verify transaction ownership: ${fetchError?.message}`);
+      }
+
+      // Validate business rules in parallel for better performance (only for provided fields)
+      const validationPromises: Promise<boolean>[] = [];
+
+      if (command.account_id !== undefined) {
+        validationPromises.push(this.validateAccountOwnership(command.account_id, userId));
+      }
+      if (command.category_id !== undefined) {
+        validationPromises.push(this.validateCategoryOwnership(command.category_id, userId));
+      }
+      if (command.currency_id !== undefined) {
+        validationPromises.push(this.validateCurrency(command.currency_id));
+      }
+
+      if (validationPromises.length > 0) {
+        const validationResults = await Promise.all(validationPromises);
+        let resultIndex = 0;
+
+        if (command.account_id !== undefined && !validationResults[resultIndex++]) {
+          throw new Error("Account not found or not accessible");
+        }
+        if (command.category_id !== undefined && !validationResults[resultIndex++]) {
+          throw new Error("Category not found or not accessible");
+        }
+        if (command.currency_id !== undefined && !validationResults[resultIndex++]) {
+          throw new Error("Currency not found");
+        }
+      }
+
+      // Build update object with only provided fields
+      const updateData: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (command.transaction_date !== undefined) updateData.transaction_date = command.transaction_date;
+      if (command.account_id !== undefined) updateData.account_id = command.account_id;
+      if (command.category_id !== undefined) updateData.category_id = command.category_id;
+      if (command.amount !== undefined) updateData.amount = command.amount;
+      if (command.currency_id !== undefined) updateData.currency_id = command.currency_id;
+      if (sanitizedComment !== undefined) updateData.comment = sanitizedComment;
+
+      // Update the transaction with optimized query
+      const { error: updateError } = await this.supabase
+        .from("transactions")
+        .update(updateData)
+        .eq("id", id)
+        .eq("user_id", userId);
+
+      if (updateError) {
+        // Handle specific database constraint errors
+        if (updateError.code === "23503") {
+          // Foreign key violation
+          throw new Error("Referenced account, category, or currency no longer exists");
+        }
+        if (updateError.code === "42501") {
+          // Insufficient privilege (RLS)
+          throw new Error("Access denied: insufficient permissions");
+        }
+        throw new Error(`Failed to update transaction: ${updateError.message}`);
+      }
+
+      // Fetch the updated transaction with optimized join query
+      const { data: transactionWithJoins, error: selectError } = await this.supabase
+        .from("transactions")
+        .select(
+          `
+          id,
+          user_id,
+          transaction_date,
+          account_id,
+          category_id,
+          amount,
+          currency_id,
+          comment,
+          active,
+          created_at,
+          updated_at,
+          accounts!transactions_account_id_fkey(name),
+          categories!transactions_category_id_fkey(name, category_type),
+          currencies!transactions_currency_id_fkey(code)
+        `
+        )
+        .eq("id", id)
+        .eq("user_id", userId)
+        .single();
+
+      if (selectError) {
+        // Log error but don't expose internal details
+        throw new Error("Transaction updated but failed to retrieve details");
+      }
+
+      // Transform the data to match TransactionDTO structure with null safety
+      const transactionDTO: TransactionDTO = {
+        id: transactionWithJoins.id,
+        user_id: transactionWithJoins.user_id,
+        transaction_date: transactionWithJoins.transaction_date,
+        account_id: transactionWithJoins.account_id,
+        account_name: transactionWithJoins.accounts?.name || "Unknown Account",
+        category_id: transactionWithJoins.category_id,
+        category_name: transactionWithJoins.categories?.name || "Unknown Category",
+        category_type: transactionWithJoins.categories?.category_type || "expense",
+        amount: transactionWithJoins.amount,
+        currency_id: transactionWithJoins.currency_id,
+        currency_code: transactionWithJoins.currencies?.code || "Unknown",
+        comment: transactionWithJoins.comment,
+        active: transactionWithJoins.active,
+        created_at: transactionWithJoins.created_at,
+        updated_at: transactionWithJoins.updated_at,
+      };
+
+      return transactionDTO;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Failed to update transaction: ${error}`);
+    }
+  }
+
+  /**
    * Creates a new transaction for the specified user
    * @param command - The transaction creation command with validated data
    * @param userId - The user ID who owns the transaction (defaults to DEFAULT_USER_ID)
@@ -308,6 +481,96 @@ export class TransactionService {
         throw error;
       }
       throw new Error(`Failed to create transaction: ${error}`);
+    }
+  }
+
+  /**
+   * Retrieves a single transaction by ID with joined data
+   * @param transactionId - The transaction ID to retrieve
+   * @param userId - The user ID who owns the transaction (defaults to DEFAULT_USER_ID)
+   * @returns Promise<TransactionDTO | null> - The transaction with joined data or null if not found
+   * @throws Error if database query fails or validation fails
+   */
+  async getTransactionById(transactionId: number, userId: string = DEFAULT_USER_ID): Promise<TransactionDTO | null> {
+    try {
+      // Validate transaction ID parameter
+      SecurityUtils.validateNumericId(transactionId, "transaction_id");
+
+      // Execute optimized query with joins to get enriched transaction data
+      const { data: transactionWithJoins, error } = await this.supabase
+        .from("transactions")
+        .select(
+          `
+          id,
+          user_id,
+          transaction_date,
+          account_id,
+          category_id,
+          amount,
+          currency_id,
+          comment,
+          active,
+          created_at,
+          updated_at,
+          accounts!transactions_account_id_fkey(name),
+          categories!transactions_category_id_fkey(name, category_type),
+          currencies!transactions_currency_id_fkey(code)
+        `
+        )
+        .eq("id", transactionId)
+        .eq("user_id", userId)
+        .eq("active", true) // Only return active transactions
+        .single();
+
+      if (error) {
+        // Handle specific database errors
+        if (error.code === "PGRST116") {
+          // No rows found - transaction doesn't exist or doesn't belong to user
+          return null;
+        }
+        if (error.code === "42501") {
+          // Insufficient privilege (RLS)
+          throw new Error("Access denied: insufficient permissions");
+        }
+        if (error.code === "42P01") {
+          throw new Error("Database schema error: required tables not found");
+        }
+        if (error.code === "42703") {
+          throw new Error("Database schema error: invalid column reference");
+        }
+        throw new Error(`Failed to fetch transaction: ${error.message}`);
+      }
+
+      // Validate required fields to prevent runtime errors
+      if (!transactionWithJoins.id || !transactionWithJoins.user_id) {
+        throw new Error("Invalid transaction data: missing required fields");
+      }
+
+      // Transform the data to match TransactionDTO structure with null safety
+      const transactionDTO: TransactionDTO = {
+        id: transactionWithJoins.id,
+        user_id: transactionWithJoins.user_id,
+        transaction_date: transactionWithJoins.transaction_date,
+        account_id: transactionWithJoins.account_id,
+        account_name: transactionWithJoins.accounts?.name || "Unknown Account",
+        category_id: transactionWithJoins.category_id,
+        category_name: transactionWithJoins.categories?.name || "Unknown Category",
+        category_type: transactionWithJoins.categories?.category_type || "expense",
+        amount: transactionWithJoins.amount,
+        currency_id: transactionWithJoins.currency_id,
+        currency_code: transactionWithJoins.currencies?.code || "Unknown",
+        comment: transactionWithJoins.comment,
+        active: transactionWithJoins.active,
+        created_at: transactionWithJoins.created_at,
+        updated_at: transactionWithJoins.updated_at,
+      };
+
+      return transactionDTO;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Failed to fetch transaction: ${error}`);
     }
   }
 
@@ -486,5 +749,56 @@ export class TransactionService {
       }
       throw new Error(`Failed to fetch transactions: ${error}`);
     }
+  }
+
+  /**
+   * Performs soft delete on a transaction by setting active = false
+   * This preserves the transaction for audit purposes while excluding it from business operations
+   *
+   * @param id - Transaction ID to delete
+   * @param userId - User ID who owns the transaction
+   * @param supabase - Supabase client instance
+   * @throws Error if transaction not found, access denied, or database operation fails
+   */
+  static async deleteTransaction(id: number, userId: string, supabase: typeof supabaseClient): Promise<void> {
+    // Input validation
+    SecurityUtils.validateNumericId(id, "transaction ID");
+
+    // First check if transaction exists and is owned by user
+    const { data: existingTransaction, error: fetchError } = await supabase
+      .from("transactions")
+      .select("id, user_id, active")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .eq("active", true)
+      .single();
+
+    if (fetchError) {
+      if (fetchError.code === "PGRST116") {
+        throw new Error("Transaction not found or access denied");
+      }
+      throw new Error(`Failed to verify transaction: ${fetchError.message}`);
+    }
+
+    if (!existingTransaction) {
+      throw new Error("Transaction not found or access denied");
+    }
+
+    // Perform soft delete
+    const { error: updateError } = await supabase
+      .from("transactions")
+      .update({
+        active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .eq("active", true);
+
+    if (updateError) {
+      throw new Error(`Failed to delete transaction: ${updateError.message}`);
+    }
+
+    // Transaction soft deleted successfully
   }
 }

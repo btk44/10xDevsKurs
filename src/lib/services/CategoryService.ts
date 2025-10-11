@@ -277,6 +277,67 @@ export class CategoryService {
   }
 
   /**
+   * Soft deletes a category by setting its active flag to false
+   * Validates that the category has no active transactions before deletion
+   * @param categoryId - The category ID to delete
+   * @param userId - The user ID who owns the category
+   * @returns Promise<void> - Resolves on successful deletion
+   * @throws Error if category not found, has active transactions, or database operation fails
+   */
+  async deleteCategory(categoryId: number, userId: string): Promise<void> {
+    try {
+      // Validate inputs
+      this.validateInputs(userId);
+
+      if (categoryId <= 0) {
+        throw new Error("Valid category ID is required");
+      }
+
+      // Check if category exists and belongs to user
+      const existingCategory = await this.getCategoryById(categoryId, userId);
+      if (!existingCategory) {
+        throw new Error("Category not found or access denied");
+      }
+
+      // Check for active transactions associated with this category
+      const { count, error: countError } = await this.supabase
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .eq("category_id", categoryId)
+        .eq("user_id", userId)
+        .eq("active", true);
+
+      if (countError) {
+        throw new Error(`Failed to check category usage: ${countError.message}`);
+      }
+
+      // If there are active transactions, prevent deletion
+      if (count && count > 0) {
+        throw new Error(`Cannot delete category with active transactions: ${count} transaction(s) found`);
+      }
+
+      // Perform soft delete by setting active = false
+      const { error: updateError } = await this.supabase
+        .from("categories")
+        .update({ active: false })
+        .eq("id", categoryId)
+        .eq("user_id", userId);
+
+      if (updateError) {
+        if (updateError.code === "PGRST116") {
+          throw new Error("Category not found or access denied");
+        }
+        throw new Error(`Failed to delete category: ${updateError.message}`);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Failed to delete category: ${error}`);
+    }
+  }
+
+  /**
    * Validates that a parent category exists, is active, belongs to the user,
    * is not a subcategory itself, and matches the expected type
    * @param parentId - The parent category ID to validate
