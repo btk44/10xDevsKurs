@@ -7,21 +7,21 @@ A responsive web application that simplifies personal expense tracking by replac
 
 ## Table of Contents
 
-1. [Tech Stack](#tech-stack)  
-2. [Getting Started](#getting-started)  
-3. [Available Scripts](#available-scripts)  
-4. [Project Scope](#project-scope)  
-   - [In Scope (MVP)](#in-scope-mvp)  
-   - [Out of Scope](#out-of-scope)  
-5. [Project Status](#project-status)  
-6. [License](#license)  
+1. [Tech Stack](#tech-stack)
+2. [Getting Started](#getting-started)
+3. [Available Scripts](#available-scripts)
+4. [Project Scope](#project-scope)
+   - [In Scope (MVP)](#in-scope-mvp)
+   - [Out of Scope](#out-of-scope)
+5. [Project Status](#project-status)
+6. [License](#license)
 
 ## Tech Stack
 
-- **TypeScript**  
-- **Astro**  
-- **React**  
-- **Tailwind CSS**  
+- **TypeScript**
+- **Astro**
+- **React**
+- **Tailwind CSS**
 - **Supabase** (Authentication & Database)
 
 ## Getting Started
@@ -83,24 +83,24 @@ In the project directory, you can run:
 
 ### In Scope (MVP)
 
-- Responsive web application accessible on modern browsers  
-- User registration, login, and password reset via Supabase  
-- Secure storage of user data (accounts, categories, transactions)  
+- Responsive web application accessible on modern browsers
+- User registration, login, and password reset via Supabase
+- Secure storage of user data (accounts, categories, transactions)
 - CRUD operations for:
   - **Accounts** (name, currency; real-time balance)
   - **Categories** (Income vs. Expense)
   - **Transactions** (date, account, category, amount, optional comment)
-- Transaction list with sorting (newest first) and multi-criteria filtering  
-- Monthly expense summary per category with navigation controls  
+- Transaction list with sorting (newest first) and multi-criteria filtering
+- Monthly expense summary per category with navigation controls
 
 ### Out of Scope
 
-- Native mobile applications (iOS/Android)  
-- Sharing accounts or data between users  
-- Importing/exporting data (CSV, QIF)  
-- Advanced budgeting/financial planning features  
-- Dedicated transfers feature (handled as separate transactions)  
-- Automatic currency conversion  
+- Native mobile applications (iOS/Android)
+- Sharing accounts or data between users
+- Importing/exporting data (CSV, QIF)
+- Advanced budgeting/financial planning features
+- Dedicated transfers feature (handled as separate transactions)
+- Automatic currency conversion
 
 ## Project Status
 

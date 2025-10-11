@@ -2,8 +2,7 @@
 
 ## Database - Expense Tracking Application MVP
 
-
-***
+---
 
 ## 1. Executive Summary
 
@@ -23,7 +22,7 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - Strategy: Soft delete, balance calculation using category type
 - Category type determines transaction classification (income/expense)
 
-***
+---
 
 ## 2. Product Goals
 
@@ -34,7 +33,6 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - Achieve response time < 200ms for typical operations
 - Support monthly financial summaries with category aggregations
 
-
 ### 2.2 Technical Goals
 
 - Ensure complete data isolation between users
@@ -43,30 +41,33 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - Ensure data integrity without complex triggers
 - Support hierarchical category summations
 
-***
+---
 
 ## 3. Change Log from Previous Version
 
 ### 3.1 Major Changes
 
 **Change 1: Transaction Amount Validation**
+
 - Transaction amounts must now be positive values > 0
 - Previous: allowed negative, zero, and positive values
 - Impact: Transaction type is derived from category type instead of amount sign
 
 **Change 2: Category Type System**
+
 - Added category_type ENUM field ('income', 'expense')
 - Category type is inherited by child categories from parent
 - Default type: 'expense'
 - Impact: All transaction calculations now based on category type
 
 **Change 3: Monthly Category Summary**
+
 - New database view: view_category_monthly_summary
 - Provides hierarchical summation of transactions for current month
 - Aggregates subcategory amounts into parent categories
 - Impact: New performance considerations for monthly reporting
 
-***
+---
 
 ## 4. Functional Requirements
 
@@ -85,7 +86,6 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - ✓ Read-only access for users through RLS
 - ✓ Predefined currencies: PLN, EUR, USD, GBP, CHF, CZK
 
-
 ### 4.2 Account Management
 
 **REQ-DB-002: User Accounts**
@@ -101,7 +101,6 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - ✓ Each account must have assigned currency
 - ✓ User sees only own accounts (RLS)
 - ✓ Soft delete through active flag
-
 
 ### 4.3 Category Management
 
@@ -126,7 +125,6 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - ✓ Parent existence validation when creating subcategory
 - ✓ Changing parent category type cascades to all child categories
 
-
 ### 4.4 Transaction Management
 
 **REQ-DB-004: Financial Transactions**
@@ -148,7 +146,6 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - ✓ User sees only own transactions (RLS)
 - ✓ Soft delete through active flag
 
-
 ### 4.5 Monthly Category Summary
 
 **REQ-DB-005: Category Aggregation View**
@@ -166,7 +163,7 @@ Database system based on PostgreSQL in Supabase, designed to support a multi-use
 - ✓ User sees only own data (RLS through underlying tables)
 - ✓ Performance target: < 150ms for user with 500 transactions/month
 
-***
+---
 
 ## 5. Database Architecture
 
@@ -229,7 +226,6 @@ CREATE TYPE category_type_enum AS ENUM ('income', 'expense');
 - updated_at (TIMESTAMPTZ) DEFAULT NOW()
 ```
 
-
 ### 5.2 Relations
 
 ```
@@ -239,7 +235,6 @@ accounts (1) ----< (N) transactions
 categories (1) ----< (N) transactions
 categories (1) ----< (N) categories (self-reference, parent_id)
 ```
-
 
 ### 5.3 Keys and Indexes
 
@@ -284,12 +279,11 @@ idx_transactions_user_date (user_id, transaction_date DESC) WHERE active = true
 idx_transactions_category_month (category_id, transaction_date, amount) WHERE active = true
 
 -- Monthly summary optimization
-idx_transactions_monthly (user_id, transaction_date, category_id) 
+idx_transactions_monthly (user_id, transaction_date, category_id)
     WHERE active = true AND transaction_date >= DATE_TRUNC('month', CURRENT_DATE)
 ```
 
-
-***
+---
 
 ## 6. Security Requirements
 
@@ -307,7 +301,6 @@ idx_transactions_monthly (user_id, transaction_date, category_id)
 - ✓ Tests verifying no access to other users' data
 - ✓ RLS policies cover all operations: SELECT, INSERT, UPDATE, DELETE
 
-
 ### 6.2 Data Validation
 
 **REQ-SEC-002: Database Constraints**
@@ -321,7 +314,7 @@ idx_transactions_monthly (user_id, transaction_date, category_id)
 - **Category type: must be 'income' or 'expense' (ENUM enforcement)**
 - **Subcategory type must match parent type (trigger validation)**
 
-***
+---
 
 ## 7. Performance Requirements
 
@@ -341,7 +334,6 @@ idx_transactions_monthly (user_id, transaction_date, category_id)
 - Maximum 1,000,000 transactions in system without degradation
 - Concurrent users: 100 users simultaneously
 
-
 ### 7.2 Optimizations
 
 **REQ-PERF-003: Balance Calculation Strategy**
@@ -358,7 +350,7 @@ idx_transactions_monthly (user_id, transaction_date, category_id)
 - Reduces index size by ~20-40% in applications with many deleted records
 - **Additional partial index for current month transactions**
 
-***
+---
 
 ## 8. Business Logic in Database
 
@@ -368,9 +360,9 @@ idx_transactions_monthly (user_id, transaction_date, category_id)
 
 ```sql
 CREATE OR REPLACE FUNCTION calculate_account_balance(
-    p_account_id BIGINT, 
+    p_account_id BIGINT,
     p_user_id UUID
-) 
+)
 RETURNS DECIMAL(12,2)
 LANGUAGE plpgsql
 AS $$
@@ -379,11 +371,11 @@ DECLARE
 BEGIN
     SELECT COALESCE(
         SUM(
-            CASE 
+            CASE
                 WHEN c.category_type = 'income' THEN t.amount
                 WHEN c.category_type = 'expense' THEN -t.amount
             END
-        ), 
+        ),
         0
     )
     INTO v_balance
@@ -431,7 +423,6 @@ $$;
 - Automatically updates updated_at field on every UPDATE
 - Trigger on all tables
 
-
 ### 8.2 Triggers
 
 **REQ-TRIG-001: Category Hierarchy Validation**
@@ -440,10 +431,10 @@ $$;
 - Function: `validate_category_depth()`
 - Executed: BEFORE INSERT OR UPDATE on categories
 - Logic:
-    - If parent_id > 0: check if parent exists
-    - If parent_id > 0: check if parent is not already a subcategory
-    - **If parent_id > 0: validate category_type matches parent's category_type**
-    - Block operation if hierarchy violation
+  - If parent_id > 0: check if parent exists
+  - If parent_id > 0: check if parent is not already a subcategory
+  - **If parent_id > 0: validate category_type matches parent's category_type**
+  - Block operation if hierarchy violation
 
 ```sql
 CREATE OR REPLACE FUNCTION validate_category_depth()
@@ -460,13 +451,13 @@ BEGIN
     END IF;
 
     -- Check if parent exists and get its depth and type
-    SELECT 
+    SELECT
         CASE WHEN parent_id = 0 THEN 1 ELSE 2 END,
         category_type
     INTO v_parent_depth, v_parent_type
     FROM categories
-    WHERE id = NEW.parent_id 
-        AND user_id = NEW.user_id 
+    WHERE id = NEW.parent_id
+        AND user_id = NEW.user_id
         AND active = true;
 
     -- Parent must exist
@@ -495,9 +486,9 @@ $$;
 - Function: `cascade_category_type_to_children()`
 - Executed: AFTER UPDATE on categories
 - Logic:
-    - When parent category type changes
-    - Update all child categories to match new type
-    - Ensures type inheritance is maintained
+  - When parent category type changes
+  - Update all child categories to match new type
+  - Ensures type inheritance is maintained
 
 ```sql
 CREATE OR REPLACE FUNCTION cascade_category_type_to_children()
@@ -525,7 +516,7 @@ $$;
 
 - Trigger on each table updating updated_at
 
-***
+---
 
 ## 9. Views
 
@@ -533,7 +524,7 @@ $$;
 
 ```sql
 CREATE VIEW view_accounts_with_balance AS
-SELECT 
+SELECT
     a.id,
     a.user_id,
     a.name,
@@ -551,7 +542,6 @@ WHERE a.active = true;
 
 **Purpose:** Simplify UI queries - one query instead of aggregation in application. Balance calculation uses category type.
 
-
 **REQ-VIEW-002: view_category_monthly_summary**
 
 ```sql
@@ -564,7 +554,7 @@ current_month_end AS (
 ),
 -- Get all transactions for current month with category info
 monthly_transactions AS (
-    SELECT 
+    SELECT
         t.user_id,
         t.category_id,
         c.name AS category_name,
@@ -582,7 +572,7 @@ monthly_transactions AS (
 ),
 -- Aggregate by subcategory
 subcategory_sums AS (
-    SELECT 
+    SELECT
         user_id,
         category_id,
         category_name,
@@ -596,7 +586,7 @@ subcategory_sums AS (
 ),
 -- Aggregate by main category (including direct transactions)
 main_category_direct AS (
-    SELECT 
+    SELECT
         user_id,
         category_id,
         category_name,
@@ -610,7 +600,7 @@ main_category_direct AS (
 ),
 -- Roll up subcategory amounts to parents
 parent_rollup AS (
-    SELECT 
+    SELECT
         s.user_id,
         s.parent_id AS category_id,
         SUM(s.total_amount) AS subcategory_total,
@@ -619,7 +609,7 @@ parent_rollup AS (
     GROUP BY s.user_id, s.parent_id
 )
 -- Combine main categories with rolled-up subcategory totals
-SELECT 
+SELECT
     COALESCE(m.user_id, p.user_id) AS user_id,
     COALESCE(m.category_id, p.category_id) AS category_id,
     m.category_name,
@@ -634,7 +624,7 @@ FULL OUTER JOIN parent_rollup p ON m.user_id = p.user_id AND m.category_id = p.c
 UNION ALL
 
 -- Include subcategories as separate rows
-SELECT 
+SELECT
     user_id,
     category_id,
     category_name,
@@ -646,7 +636,8 @@ SELECT
 FROM subcategory_sums;
 ```
 
-**Purpose:** 
+**Purpose:**
+
 - Provides monthly summary of transactions grouped by category
 - Includes hierarchical summation (subcategory amounts rolled into parents)
 - Shows both main categories with totals and individual subcategories
@@ -654,6 +645,7 @@ FROM subcategory_sums;
 - Separated by category type (income/expense)
 
 **Columns:**
+
 - `user_id`: User identifier
 - `category_id`: Category identifier
 - `category_name`: Category name
@@ -663,14 +655,14 @@ FROM subcategory_sums;
 - `transaction_count`: Number of transactions
 - `report_date`: Current date when view was queried
 
-***
+---
 
 ## 10. Seed Data
 
 **REQ-DATA-001: Predefined Currencies**
 
 ```sql
-INSERT INTO currencies (code, description) VALUES 
+INSERT INTO currencies (code, description) VALUES
     ('PLN', 'Polish Zloty'),
     ('EUR', 'Euro'),
     ('USD', 'US Dollar'),
@@ -679,8 +671,7 @@ INSERT INTO currencies (code, description) VALUES
     ('CZK', 'Czech Koruna');
 ```
 
-
-***
+---
 
 ## 11. Soft Delete Strategy
 
@@ -691,10 +682,10 @@ INSERT INTO currencies (code, description) VALUES
 - Deletion by changing `active = false` flag
 - Implementation in application code, NOT in database
 - Cascading marking:
-    - Account deletion → all related transactions
-    - Category deletion → all related transactions
-    - **Category type change → automatic cascade to children (trigger)**
-    - Currencies CANNOT be deleted
+  - Account deletion → all related transactions
+  - Category deletion → all related transactions
+  - **Category type change → automatic cascade to children (trigger)**
+  - Currencies CANNOT be deleted
 
 **REQ-DEL-002: Impact on Calculations**
 
@@ -702,7 +693,7 @@ INSERT INTO currencies (code, description) VALUES
 - Deleted categories (active=false) do NOT appear in monthly summaries
 - All aggregating queries filter by `active = true`
 
-***
+---
 
 ## 12. Migrations and Deployment
 
@@ -731,7 +722,6 @@ INSERT INTO currencies (code, description) VALUES
 9. Run verification tests
 10. Performance testing (especially monthly summary view)
 
-
 ### 12.2 Rollback Strategy
 
 - Each migration step in separate transaction
@@ -739,7 +729,7 @@ INSERT INTO currencies (code, description) VALUES
 - Database backup before deployment
 - Special attention to ENUM type changes (requires careful migration)
 
-***
+---
 
 ## 13. Monitoring and Maintenance
 
@@ -761,7 +751,6 @@ INSERT INTO currencies (code, description) VALUES
 - **Distribution of income vs expense categories**
 - **Average monthly transaction count per user**
 
-
 ### 13.2 Maintenance Tasks
 
 - **Weekly**: ANALYZE on all tables
@@ -769,7 +758,7 @@ INSERT INTO currencies (code, description) VALUES
 - **Quarterly**: Review partial indexes vs full indexes, review monthly summary view performance
 - **On-demand**: REINDEX on performance degradation
 
-***
+---
 
 ## 14. Constraints and Limitations
 
@@ -779,7 +768,6 @@ INSERT INTO currencies (code, description) VALUES
 - **No cascading delete**: Handling in application code instead of triggers
 - **No FK on parent_id in categories**: parent_id=0 doesn't exist in table
 - **ENUM changes require migration**: Adding new category types requires database migration
-
 
 ### 14.2 Business Assumptions
 
@@ -791,7 +779,7 @@ INSERT INTO currencies (code, description) VALUES
 - **Category type changes affect all historical transactions**
 - **Monthly summaries based on server time zone**
 
-***
+---
 
 ## 15. Project Acceptance Criteria
 
@@ -808,14 +796,12 @@ INSERT INTO currencies (code, description) VALUES
 - ✓ **view_category_monthly_summary returns hierarchical sums correctly**
 - ✓ Seed data (currencies) loaded
 
-
 ### 15.2 Performance
 
 - ✓ Transaction list queries (50 records) < 50ms
 - ✓ Balance calculation < 100ms for account with 1000 transactions
 - ✓ **Monthly category summary < 150ms for user with 500 transactions/month**
 - ✓ Indexes used in > 95% of queries (no seq scans)
-
 
 ### 15.3 Security
 
@@ -825,7 +811,7 @@ INSERT INTO currencies (code, description) VALUES
 - ✓ **Trigger blocks subcategory with different type than parent**
 - ✓ **Transaction amount validation prevents zero or negative values**
 
-***
+---
 
 ## 16. Risks and Mitigation
 
@@ -855,7 +841,6 @@ INSERT INTO currencies (code, description) VALUES
 - Probability: medium
 - Impact: medium
 
-
 ### 16.2 Business Risks
 
 **Risk 5: Users accidentally change category type**
@@ -870,7 +855,7 @@ INSERT INTO currencies (code, description) VALUES
 - Probability: high
 - Impact: high
 
-***
+---
 
 ## 17. Future Enhancements (beyond MVP)
 
@@ -885,7 +870,7 @@ INSERT INTO currencies (code, description) VALUES
 - **Custom date ranges**: Summary views for arbitrary date ranges
 - **Multi-level categories**: Support for more than 2 levels if needed
 
-***
+---
 
 ## 18. Technical Documentation
 
@@ -900,7 +885,6 @@ INSERT INTO currencies (code, description) VALUES
 - `07_create_views.sql` - Views (including monthly summary)
 - `08_seed_data.sql` - Seed data
 - `99_verify_installation.sql` - Installation verification
-
 
 ### 18.2 ERD Diagram
 
@@ -942,11 +926,12 @@ INSERT INTO currencies (code, description) VALUES
 ```
 
 **Key Changes in ERD:**
+
 - categories now includes `type` field (ENUM)
 - transactions.amount is marked as (+) indicating positive only
 - Type flows from category to transaction logic
 
-***
+---
 
 ## 19. Contact and Responsibility
 
@@ -955,17 +940,16 @@ INSERT INTO currencies (code, description) VALUES
 **Performance Review**: DBA Team  
 **Business Review**: Product Owner
 
-***
+---
 
 ## 20. Document History
 
-| Version | Date | Author | Changes |
-| :-- | :-- | :-- | :-- |
-| 1.0 | 2025-10-02 | Backend Architect | Initial version - complete database structure |
-| 2.0 | 2025-10-07 | Backend Architect | Major update: Added category types, positive-only amounts, monthly summary view |
+| Version | Date       | Author            | Changes                                                                         |
+| :------ | :--------- | :---------------- | :------------------------------------------------------------------------------ |
+| 1.0     | 2025-10-02 | Backend Architect | Initial version - complete database structure                                   |
+| 2.0     | 2025-10-07 | Backend Architect | Major update: Added category types, positive-only amounts, monthly summary view |
 
-
-***
+---
 
 **Document Status**: ✅ **Approved for Review**
 
@@ -976,6 +960,5 @@ INSERT INTO currencies (code, description) VALUES
 3. Performance testing (especially monthly summary view)
 4. Staging environment deployment
 5. Production deployment
-
 
 <div align="center">⁂</div>
