@@ -147,7 +147,7 @@ export default function TransactionForm({
   };
 
   // Validate form field on blur
-  const validateField = (name: string, value: any): string | undefined => {
+  const validateField = (name: string, value: string | number): string | undefined => {
     switch (name) {
       case "transaction_date":
         return !value ? "Date is required" : undefined;
@@ -156,9 +156,9 @@ export default function TransactionForm({
       case "category_id":
         return !value ? "Category is required" : undefined;
       case "amount":
-        return !value || parseFloat(value) <= 0 ? "Amount must be greater than 0" : undefined;
+        return !value || Number(value) <= 0 ? "Amount must be greater than 0" : undefined;
       case "comment":
-        return value && value.length > 255 ? "Comment must be less than 255 characters" : undefined;
+        return typeof value === "string" && value.length > 255 ? "Comment must be less than 255 characters" : undefined;
       default:
         return undefined;
     }
@@ -178,9 +178,23 @@ export default function TransactionForm({
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const zeroPad = (num: number, places: number) => String(num).padStart(places, "0");
 
     if (validateForm()) {
-      onSubmit(formData);
+      // Add time part to transaction_date to make it ISO format
+      const initialDate = initialData?.transaction_date ? new Date(initialData.transaction_date) : new Date();
+      const transDate = `${formData.transaction_date}T${zeroPad(initialDate.getHours(), 2)}:${zeroPad(initialDate.getMinutes(), 2)}:${zeroPad(initialDate.getSeconds(), 2)}Z`;
+      const formattedData = {
+        ...formData,
+        transaction_date: transDate,
+        // Ensure currency_id is set if account_id is provided
+        currency_id:
+          formData.currency_id ||
+          (formData.account_id ? accounts.find((acc) => acc.id === formData.account_id)?.currency_id || 1 : 1),
+        // Ensure comment is never null
+        comment: formData.comment || "",
+      };
+      onSubmit(formattedData);
     }
   };
 
@@ -309,7 +323,7 @@ export default function TransactionForm({
               type="text"
               id="comment"
               name="comment"
-              value={formData.comment}
+              value={formData.comment || ""}
               onChange={handleChange}
               onBlur={handleBlur}
               maxLength={255}
