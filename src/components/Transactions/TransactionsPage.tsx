@@ -38,10 +38,16 @@ export default function TransactionsPage() {
     pagination,
     isLoading: transactionsLoading,
     error: transactionsError,
+    refreshData: refreshTransactions,
   } = useTransactions(filters);
 
   // Fetch accounts for form and filtering
-  const { data: accounts, isLoading: accountsLoading, error: accountsError } = useAccounts();
+  const {
+    data: accounts,
+    isLoading: accountsLoading,
+    error: accountsError,
+    refreshData: refreshAccounts,
+  } = useAccounts();
 
   // Fetch categories for form and filtering
   const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useCategories();
@@ -76,15 +82,19 @@ export default function TransactionsPage() {
       // Update existing transaction
       const result = await updateTransaction(selectedTransaction.id, data as UpdateTransactionCommand);
       if (result) {
-        // Refetch transactions and reset form
+        // Refresh transactions and accounts data
+        await Promise.all([refreshTransactions(), refreshAccounts()]);
+        // Reset form
         setSelectedTransaction(null);
       }
     } else {
       // Create new transaction
       const result = await createTransaction(data as CreateTransactionCommand);
       if (result) {
-        // Refetch transactions and reset form
-        setFilters((prev) => ({ ...prev })); // Trigger refetch by updating state reference
+        // Refresh transactions and accounts data
+        await Promise.all([refreshTransactions(), refreshAccounts()]);
+        // Reset form
+        setSelectedTransaction(null);
       }
     }
   };
@@ -98,7 +108,9 @@ export default function TransactionsPage() {
   const handleDeleteTransaction = async (id: number) => {
     const success = await deleteTransaction(id);
     if (success) {
-      // Refetch transactions and reset form
+      // Refresh transactions and accounts data
+      await Promise.all([refreshTransactions(), refreshAccounts()]);
+      // Reset form
       setSelectedTransaction(null);
     }
   };
