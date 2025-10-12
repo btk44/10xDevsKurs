@@ -265,6 +265,11 @@ export interface GetTransactionsQuery {
 }
 
 /**
+ * Type alias for transaction sort options
+ */
+export type SortOption = "transaction_date:asc" | "transaction_date:desc" | "amount:asc" | "amount:desc";
+
+/**
  * Query parameters for GET /api/reports/monthly-summary
  */
 export interface GetMonthlySummaryQuery {
