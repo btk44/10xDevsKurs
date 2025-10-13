@@ -1,6 +1,18 @@
 import { z } from "zod";
 
 // ============================================================================
+// Auth Validation Schemas
+// ============================================================================
+
+/**
+ * Schema for validating login form data
+ */
+export const LoginFormSchema = z.object({
+  email: z.string({ required_error: "Email is required" }).email("Invalid email format"),
+  password: z.string({ required_error: "Password is required" }).min(6, "Password must be at least 6 characters"),
+});
+
+// ============================================================================
 // Account Validation Schemas
 // ============================================================================
 

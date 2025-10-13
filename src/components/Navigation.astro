@@ -1,5 +1,9 @@
 ---
+import LogoutButton from "./Auth/LogoutButton";
+
 const pathname = Astro.url.pathname;
+const user = Astro.locals.user;
+const isAuthenticated = !!user;
 ---
 
 <nav class="bg-slate-800 text-white shadow-md">
@@ -8,29 +12,56 @@ const pathname = Astro.url.pathname;
       <div class="flex items-center">
         <span class="font-bold text-xl">Finance Tracker</span>
       </div>
-      <div class="flex space-x-4">
-        <a
-          href="/"
-          class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
-          aria-current={pathname === "/" ? "page" : undefined}
-        >
-          Transactions
-        </a>
-        <a
-          href="/accounts"
-          class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/accounts" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
-          aria-current={pathname === "/accounts" ? "page" : undefined}
-        >
-          Accounts
-        </a>
-        <a
-          href="/categories"
-          class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/categories" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
-          aria-current={pathname === "/categories" ? "page" : undefined}
-        >
-          Categories
-        </a>
-      </div>
+
+      {
+        isAuthenticated ? (
+          <div class="flex space-x-4">
+            <a
+              href="/"
+              class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+              aria-current={pathname === "/" ? "page" : undefined}
+            >
+              Transactions
+            </a>
+            <a
+              href="/accounts"
+              class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/accounts" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+              aria-current={pathname === "/accounts" ? "page" : undefined}
+            >
+              Accounts
+            </a>
+            <a
+              href="/categories"
+              class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/categories" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+              aria-current={pathname === "/categories" ? "page" : undefined}
+            >
+              Categories
+            </a>
+
+            <div class="flex items-center ml-4">
+              <span class="text-sm text-gray-300 mr-2">{user?.email}</span>
+              <LogoutButton client:load />
+            </div>
+          </div>
+        ) : (
+          <div class="flex space-x-4">
+            <a
+              href="/auth/login"
+              class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/auth/login" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+              aria-current={pathname === "/auth/login" ? "page" : undefined}
+            >
+              Login
+            </a>
+            <a
+              href="/auth/register"
+              class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/auth/register" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+              aria-current={pathname === "/auth/register" ? "page" : undefined}
+            >
+              Register
+            </a>
+          </div>
+        )
+      }
     </div>
   </div>
 </nav>

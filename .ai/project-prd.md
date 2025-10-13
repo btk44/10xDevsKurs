@@ -78,12 +78,20 @@ A responsive web application solves these problems by providing a centralized, d
 
 ### 5.1 Authentication and Onboarding
 
+- ID: US-000
+- Title: User Access
+- Description: As a user of the app I should access any functionality and views only after logging in
+- Acceptance Criteria:
+  - Application views and api should not be accessible without logging in
+  - Each logged user should have access to data that is owned by him (marked with his user id in database)
 - ID: US-001
 - Title: User Registration
 - Description: As a new user, I want to create a personal account using my email and a password so that I can securely store and manage my financial data.
 - Acceptance Criteria:
-  - Given I am on the application's landing page, when I click "Sign Up," I am taken to a registration form.
+  - register process is handled on dedicated registration page
   - The form requires an email and a password.
+  - when I'm not logged in user I should be automatically redirected to login page from landing page
+  - login page should have possibility to register a new user
   - Upon successful registration, I am logged into the application.
   - My user data is stored in the Supabase backend.
 - ID: US-002
