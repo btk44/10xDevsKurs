@@ -4,5 +4,8 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-  <TransactionsPage client:load />
+  <main class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Transactions</h1>
+    <TransactionsPage client:load />
+  </main>
 </Layout>
