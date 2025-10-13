@@ -1,0 +1,36 @@
+---
+const pathname = Astro.url.pathname;
+---
+
+<nav class="bg-slate-800 text-white shadow-md">
+  <div class="container mx-auto px-4">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center">
+        <span class="font-bold text-xl">Finance Tracker</span>
+      </div>
+      <div class="flex space-x-4">
+        <a
+          href="/"
+          class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+          aria-current={pathname === "/" ? "page" : undefined}
+        >
+          Transactions
+        </a>
+        <a
+          href="/accounts"
+          class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/accounts" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+          aria-current={pathname === "/accounts" ? "page" : undefined}
+        >
+          Accounts
+        </a>
+        <a
+          href="/categories"
+          class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/categories" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
+          aria-current={pathname === "/categories" ? "page" : undefined}
+        >
+          Categories
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
