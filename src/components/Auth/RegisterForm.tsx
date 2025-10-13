@@ -1,49 +1,56 @@
 import { useState } from "react";
 import { Button } from "../ui/button";
+import { RegisterFormSchema } from "../../lib/validation/schemas";
+import type { z } from "zod";
+
+type RegisterFormData = z.infer<typeof RegisterFormSchema>;
+interface FormErrors {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  general?: string;
+}
 
 export default function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const formData: RegisterFormData = { email, password, confirmPassword };
+    const result = RegisterFormSchema.safeParse(formData);
 
-    // Validate email
-    if (!email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Invalid email format";
+    if (!result.success) {
+      const formattedErrors = result.error.format();
+      const newErrors: FormErrors = {};
+
+      if (formattedErrors.email?._errors) {
+        newErrors.email = formattedErrors.email._errors[0];
+      }
+
+      if (formattedErrors.password?._errors) {
+        newErrors.password = formattedErrors.password._errors[0];
+      }
+
+      if (formattedErrors.confirmPassword?._errors) {
+        newErrors.confirmPassword = formattedErrors.confirmPassword._errors[0];
+      }
+
+      setErrors(newErrors);
+      return false;
     }
 
-    // Validate password
-    if (!password) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
-    } else if (!/[A-Z]/.test(password)) {
-      newErrors.password = "Password must contain at least one uppercase letter";
-    } else if (!/[0-9]/.test(password)) {
-      newErrors.password = "Password must contain at least one digit";
-    }
-
-    // Validate password confirmation
-    if (!confirmPassword) {
-      newErrors.confirmPassword = "Password confirmation is required";
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setErrors({});
+    setSuccessMessage("");
 
     if (!validateForm()) {
       return;
@@ -52,15 +59,41 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // This will be implemented in the next step
-      // For now, we'll just simulate a loading state
-      setTimeout(() => {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, confirmPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors({
+          general: data.error || "Registration failed. Please try again.",
+        });
         setIsLoading(false);
-      }, 1000);
+        return;
+      }
+
+      if (data.requiresEmailConfirmation) {
+        setSuccessMessage("Registration successful! Please check your email to confirm your account.");
+        // Clear form
+        setEmail("");
+        setPassword("");
+        setConfirmPassword("");
+      } else {
+        // Redirect to the main page on successful registration
+        window.location.href = "/";
+      }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again later.");
+      setErrors({
+        general: "An unexpected error occurred. Please try again later.",
+      });
       // eslint-disable-next-line no-console
       console.error("Registration error:", err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -68,7 +101,12 @@ export default function RegisterForm() {
   return (
     <div className="w-full max-w-md mx-auto">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{error}</div>}
+        {errors.general && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{errors.general}</div>
+        )}
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">{successMessage}</div>
+        )}
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">

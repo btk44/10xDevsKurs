@@ -22,6 +22,19 @@ export class AuthService {
   }
 
   /**
+   * User registration with email and password
+   * @param email - User's email
+   * @param password - User's password
+   * @returns Promise with registration result
+   */
+  async signUp(email: string, password: string) {
+    return await this.supabase.auth.signUp({
+      email,
+      password,
+    });
+  }
+
+  /**
    * User logout
    * @returns Promise with logout result
    */
@@ -60,6 +73,10 @@ export class AuthService {
         return "Email not confirmed. Please check your inbox";
       case "Invalid user":
         return "Invalid user";
+      case "User already registered":
+        return "Email already in use. Please try logging in or use a different email.";
+      case "Password should be at least 6 characters":
+        return "Password should be at least 6 characters";
       default:
         console.error("Auth error:", error);
         return "An unexpected error occurred. Please try again later.";
