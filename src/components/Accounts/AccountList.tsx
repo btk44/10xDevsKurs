@@ -26,18 +26,21 @@ export default function AccountList({ accounts, onEdit, onDelete }: AccountListP
     }
   };
 
-  const sortedAccounts = [...accounts].sort((a, b) => {
+  // Ensure accounts is always an array
+  const accountsArray = Array.isArray(accounts) ? accounts : [];
+
+  const sortedAccounts = [...accountsArray].sort((a, b) => {
     const direction = sortDirection === "asc" ? 1 : -1;
 
     switch (sortField) {
       case "name":
-        return a.name.localeCompare(b.name) * direction;
+        return (a.name || "").localeCompare(b.name || "") * direction;
       case "balance":
-        return (a.balance - b.balance) * direction;
+        return ((a.balance || 0) - (b.balance || 0)) * direction;
       case "currency_code":
-        return a.currency_code.localeCompare(b.currency_code) * direction;
+        return (a.currency_code || "").localeCompare(b.currency_code || "") * direction;
       case "created_at":
-        return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * direction;
+        return (new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()) * direction;
       default:
         return 0;
     }
@@ -49,7 +52,7 @@ export default function AccountList({ accounts, onEdit, onDelete }: AccountListP
     return sortDirection === "asc" ? " ↑" : " ↓";
   };
 
-  if (accounts.length === 0) {
+  if (accountsArray.length === 0) {
     return (
       <div className="text-center py-8 border rounded-lg bg-gray-50">
         <p className="text-gray-500">No accounts found. Create your first account above.</p>
@@ -80,10 +83,12 @@ export default function AccountList({ accounts, onEdit, onDelete }: AccountListP
         <tbody>
           {sortedAccounts.map((account) => (
             <tr key={account.id} className="border-b hover:bg-gray-50">
-              <td className="px-4 py-2">{account.name}</td>
-              <td className="px-4 py-2">{account.currency_code}</td>
-              <td className="px-4 py-2 text-right">{account.balance.toFixed(2)}</td>
-              <td className="px-4 py-2">{new Date(account.created_at).toLocaleDateString()}</td>
+              <td className="px-4 py-2">{account.name || ""}</td>
+              <td className="px-4 py-2">{account.currency_code || ""}</td>
+              <td className="px-4 py-2 text-right">{(account.balance || 0).toFixed(2)}</td>
+              <td className="px-4 py-2">
+                {account.created_at ? new Date(account.created_at).toLocaleDateString() : ""}
+              </td>
               <td className="px-4 py-2 text-right space-x-2">
                 <Button variant="outline" size="sm" onClick={() => onEdit(account)}>
                   Edit

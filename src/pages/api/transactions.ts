@@ -27,6 +27,29 @@ class TransactionAPIError extends Error {
     super(message);
     this.name = "TransactionAPIError";
   }
+
+  /**
+   * Creates a standardized error response
+   */
+  static createResponse(code: string, message: string, statusCode: number, details?: unknown): Response {
+    const errorResponse = {
+      error: {
+        code,
+        message,
+        details,
+      },
+    };
+
+    return new Response(JSON.stringify(errorResponse), {
+      status: statusCode,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+    });
+  }
 }
 
 /**
@@ -36,6 +59,10 @@ function mapServiceErrorToAPIError(error: Error): TransactionAPIError {
   const message = error.message;
 
   // Business validation errors (400 Bad Request)
+  if (message.includes("Transaction not found or access denied")) {
+    return new TransactionAPIError("TRANSACTION_NOT_FOUND", "Transaction not found", 404);
+  }
+
   if (message.includes("not found") || message.includes("not accessible")) {
     return new TransactionAPIError("RESOURCE_NOT_FOUND", message, 400);
   }
@@ -50,6 +77,10 @@ function mapServiceErrorToAPIError(error: Error): TransactionAPIError {
 
   if (message.includes("Invalid date range")) {
     return new TransactionAPIError("INVALID_DATE_RANGE", message, 400);
+  }
+
+  if (message.includes("does not exist")) {
+    return new TransactionAPIError("PAGE_NOT_FOUND", message, 404);
   }
 
   if (message.includes("Invalid transaction data")) {
@@ -67,7 +98,11 @@ function mapServiceErrorToAPIError(error: Error): TransactionAPIError {
   }
 
   // Server errors (500 Internal Server Error)
-  if (message.includes("Failed to create transaction") || message.includes("Failed to fetch")) {
+  if (
+    message.includes("Failed to create transaction") ||
+    message.includes("Failed to fetch") ||
+    message.includes("Database connection")
+  ) {
     return new TransactionAPIError("DATABASE_ERROR", "Database operation failed", 500);
   }
 
@@ -293,6 +328,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Log the failed query attempt
       const duration = Date.now() - startTime;
       TransactionLogger.logQueryAttempt(userId, query, false, duration, (serviceError as Error).message);
+
+      // If it's already a TransactionAPIError, re-throw it
+      if (serviceError instanceof TransactionAPIError) {
+        throw serviceError;
+      }
 
       // Map service errors to API errors
       const apiError = mapServiceErrorToAPIError(serviceError as Error);

@@ -118,7 +118,7 @@ export default function AccountForm({
     <div className="bg-white p-6 rounded-lg border shadow-sm">
       <h2 className="text-xl font-semibold mb-4">{isEditing ? "Edit Account" : "Create New Account"}</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form role="form" onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="name" className="block text-sm font-medium mb-1">
             Account Name *
