@@ -3,9 +3,6 @@ import { CategoryService } from "../../../lib/services/CategoryService";
 import { UpdateCategoryCommandSchema, IdParamSchema } from "../../../lib/validation/schemas";
 import type { ApiResponse, ApiErrorResponse, CategoryDTO, UpdateCategoryCommand } from "../../../types";
 
-// Default user ID for development (ignoring auth for now)
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export const prerender = false;
 
 /**
@@ -14,6 +11,20 @@ export const prerender = false;
  */
 export async function GET({ params, locals }: APIContext): Promise<Response> {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Validate path parameter (category ID)
     const idValidation = IdParamSchema.safeParse(params.id);
     if (!idValidation.success) {
@@ -41,7 +52,7 @@ export async function GET({ params, locals }: APIContext): Promise<Response> {
     const categoryService = new CategoryService(locals.supabase);
 
     // Retrieve the category
-    const category: CategoryDTO | null = await categoryService.getCategoryById(categoryId, DEFAULT_USER_ID);
+    const category: CategoryDTO | null = await categoryService.getCategoryById(categoryId, locals.user.id);
 
     // Handle category not found
     if (!category) {
@@ -139,6 +150,20 @@ export async function GET({ params, locals }: APIContext): Promise<Response> {
  */
 export async function PATCH({ params, request, locals }: APIContext): Promise<Response> {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Validate path parameter (category ID)
     const idValidation = IdParamSchema.safeParse(params.id);
     if (!idValidation.success) {
@@ -216,7 +241,7 @@ export async function PATCH({ params, request, locals }: APIContext): Promise<Re
     const updatedCategory: CategoryDTO = await categoryService.updateCategory(
       categoryId,
       validation.data as UpdateCategoryCommand,
-      DEFAULT_USER_ID
+      locals.user.id
     );
 
     // Return success response
@@ -429,6 +454,20 @@ export async function PATCH({ params, request, locals }: APIContext): Promise<Re
  */
 export async function DELETE({ params, locals }: APIContext): Promise<Response> {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Validate path parameter (category ID)
     const idValidation = IdParamSchema.safeParse(params.id);
     if (!idValidation.success) {
@@ -456,7 +495,7 @@ export async function DELETE({ params, locals }: APIContext): Promise<Response> 
     const categoryService = new CategoryService(locals.supabase);
 
     // Delete the category (soft delete)
-    await categoryService.deleteCategory(categoryId, DEFAULT_USER_ID);
+    await categoryService.deleteCategory(categoryId, locals.user.id);
 
     // Return success response (204 No Content)
     return new Response(null, {

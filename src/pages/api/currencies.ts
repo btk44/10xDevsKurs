@@ -4,9 +4,6 @@ import { CurrencyService } from "../../lib/services/CurrencyService";
 
 export const prerender = false;
 
-// TODO: Replace with proper authentication later
-// const DEFAULT_USER_ID = "default-user-id";
-
 /**
  * GET /api/currencies
  * Retrieves all active currencies available in the system

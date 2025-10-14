@@ -4,9 +4,6 @@ import { UpdateAccountCommandSchema } from "../../../lib/validation/schemas";
 import { validateRequestBody } from "../../../lib/validation/utils";
 import type { ApiResponse, ApiErrorResponse, AccountDTO, UpdateAccountCommand } from "../../../types";
 
-// Temporary constant for user ID until authentication is implemented
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export const prerender = false;
 
 /**
@@ -20,6 +17,20 @@ export const prerender = false;
  */
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Extract and validate account ID from path parameters
     const accountIdParam = params.id;
 
@@ -64,7 +75,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
     // Fetch the account by ID
     let account: AccountDTO | null;
     try {
-      account = await accountService.getAccountById(accountId, DEFAULT_USER_ID);
+      account = await accountService.getAccountById(accountId, locals.user.id);
     } catch (error) {
       // Log the error for debugging (in production, use proper logging)
       // console.error("Error retrieving account:", error);
@@ -151,6 +162,20 @@ export const GET: APIRoute = async ({ params, locals }) => {
  */
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Extract and validate account ID from path parameters
     const accountIdParam = params.id;
 
@@ -231,7 +256,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     // Update the account
     let updatedAccount: AccountDTO;
     try {
-      updatedAccount = await accountService.updateAccount(accountId, updateCommand, DEFAULT_USER_ID);
+      updatedAccount = await accountService.updateAccount(accountId, updateCommand, locals.user.id);
     } catch (error) {
       // Handle specific error cases
       if (error instanceof Error) {
@@ -333,6 +358,20 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
  */
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Extract and validate account ID from path parameters
     const accountIdParam = params.id;
 
@@ -376,7 +415,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     // Soft delete the account and related transactions
     try {
-      await accountService.softDeleteAccount(accountId, DEFAULT_USER_ID);
+      await accountService.softDeleteAccount(accountId, locals.user.id);
     } catch (error) {
       // Handle specific error cases
       if (error instanceof Error) {

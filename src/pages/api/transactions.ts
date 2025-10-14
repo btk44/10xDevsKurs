@@ -12,8 +12,6 @@ import type {
   ValidationErrorDetail,
 } from "../../types";
 
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export const prerender = false;
 
 /**
@@ -170,7 +168,13 @@ function logTransactionCreation(
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  const userId = DEFAULT_USER_ID;
+
+  // Ensure user is authenticated
+  if (!locals.user) {
+    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  }
+
+  const userId = locals.user.id;
 
   try {
     // Parse URL query parameters
@@ -348,7 +352,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  const userId = DEFAULT_USER_ID;
+
+  // Ensure user is authenticated
+  if (!locals.user) {
+    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  }
+
+  const userId = locals.user.id;
   let command: CreateTransactionCommand | null = null;
 
   try {

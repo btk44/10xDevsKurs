@@ -14,8 +14,6 @@ import type {
   ValidationErrorDetail,
 } from "../../../types";
 
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export const prerender = false;
 
 /**
@@ -133,7 +131,13 @@ const TransactionLogger = {
  */
 export const GET: APIRoute = async ({ params, locals }) => {
   const startTime = Date.now();
-  const userId = DEFAULT_USER_ID;
+
+  // Ensure user is authenticated
+  if (!locals.user) {
+    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  }
+
+  const userId = locals.user.id;
   let transactionId: number | null = null;
 
   try {
@@ -250,7 +254,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
 
 export const PATCH: APIRoute = async ({ request, params, locals }) => {
   const startTime = Date.now();
-  const userId = DEFAULT_USER_ID;
+
+  // Ensure user is authenticated
+  if (!locals.user) {
+    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  }
+
+  const userId = locals.user.id;
   let command: UpdateTransactionCommand | null = null;
   let transactionId: number | null = null;
 
@@ -412,7 +422,13 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
  */
 export const DELETE: APIRoute = async ({ params, locals }) => {
   const startTime = Date.now();
-  const userId = DEFAULT_USER_ID;
+
+  // Ensure user is authenticated
+  if (!locals.user) {
+    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  }
+
+  const userId = locals.user.id;
   let transactionId: number | null = null;
 
   try {

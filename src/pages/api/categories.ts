@@ -10,9 +10,6 @@ import type {
   GetCategoriesQuery,
 } from "../../types";
 
-// Default user ID for development (ignoring auth for now)
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export const prerender = false;
 
 /**
@@ -21,6 +18,20 @@ export const prerender = false;
  */
 export async function GET({ url, locals }: APIContext): Promise<Response> {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Parse query parameters from URL with null safety
     const searchParams = url.searchParams;
     const queryParams = {
@@ -78,7 +89,7 @@ export async function GET({ url, locals }: APIContext): Promise<Response> {
     // Retrieve categories with filtering
     const categories: CategoryDTO[] = await categoryService.getCategories(
       validation.data as GetCategoriesQuery,
-      DEFAULT_USER_ID
+      locals.user.id
     );
 
     // Return success response with proper handling of empty results
@@ -163,6 +174,20 @@ export async function GET({ url, locals }: APIContext): Promise<Response> {
  */
 export async function POST({ request, locals }: APIContext): Promise<Response> {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Parse request body
     const body = await request.json();
 
@@ -191,7 +216,7 @@ export async function POST({ request, locals }: APIContext): Promise<Response> {
     // Create the category
     const newCategory: CategoryDTO = await categoryService.createCategory(
       validation.data as CreateCategoryCommand,
-      DEFAULT_USER_ID
+      locals.user.id
     );
 
     // Return success response

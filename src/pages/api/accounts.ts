@@ -4,13 +4,24 @@ import { CreateAccountCommandSchema } from "../../lib/validation/schemas";
 import { validateRequestBody } from "../../lib/validation/utils";
 import type { ApiCollectionResponse, ApiErrorResponse, AccountDTO, ApiResponse } from "../../types";
 
-// Temporary constant for user ID until authentication is implemented
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Extract and validate query parameters from URL
     const url = new URL(request.url);
     const includeInactiveParam = url.searchParams.get("include_inactive");
@@ -46,7 +57,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const accountService = new AccountService(locals.supabase);
 
     // Fetch accounts for the user
-    const accounts = await accountService.getAccountsByUserId(DEFAULT_USER_ID, includeInactive);
+    const accounts = await accountService.getAccountsByUserId(locals.user.id, includeInactive);
 
     // Format successful response
     const response: ApiCollectionResponse<AccountDTO> = {
@@ -103,6 +114,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
  */
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    // Ensure user is authenticated
+    if (!locals.user) {
+      const errorResponse: ApiErrorResponse = {
+        error: {
+          code: "UNAUTHENTICATED",
+          message: "Authentication required",
+        },
+      };
+      return new Response(JSON.stringify(errorResponse), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Parse request body
     let requestBody: unknown;
     try {
@@ -143,7 +168,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Create the account
     let newAccount: AccountDTO;
     try {
-      newAccount = await accountService.createAccount(validation.data, DEFAULT_USER_ID);
+      newAccount = await accountService.createAccount(validation.data, locals.user.id);
     } catch (error) {
       if (error instanceof Error) {
         // Handle specific error cases

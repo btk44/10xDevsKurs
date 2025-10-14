@@ -8,8 +8,6 @@ import type {
   PaginationDTO,
 } from "../../types";
 
-const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000000";
-
 /**
  * Security utilities for input sanitization and validation
  */
@@ -188,15 +186,11 @@ export class TransactionService {
    * Update an existing transaction
    * @param command - The transaction update command with validated data
    * @param id - The transaction ID to update
-   * @param userId - The user ID who owns the transaction (defaults to DEFAULT_USER_ID)
+   * @param userId - The user ID who owns the transaction
    * @returns Promise<TransactionDTO> - The updated transaction with joined data
    * @throws Error if validation fails or database operation fails
    */
-  async updateTransaction(
-    command: UpdateTransactionCommand,
-    id: number,
-    userId: string = DEFAULT_USER_ID
-  ): Promise<TransactionDTO> {
+  async updateTransaction(command: UpdateTransactionCommand, id: number, userId: string): Promise<TransactionDTO> {
     try {
       // Validate ID parameter
       SecurityUtils.validateNumericId(id, "transaction_id");
@@ -359,11 +353,11 @@ export class TransactionService {
   /**
    * Creates a new transaction for the specified user
    * @param command - The transaction creation command with validated data
-   * @param userId - The user ID who owns the transaction (defaults to DEFAULT_USER_ID)
+   * @param userId - The user ID who owns the transaction
    * @returns Promise<TransactionDTO> - The created transaction with joined data
    * @throws Error if validation fails or database operation fails
    */
-  async create(command: CreateTransactionCommand, userId: string = DEFAULT_USER_ID): Promise<TransactionDTO> {
+  async create(command: CreateTransactionCommand, userId: string): Promise<TransactionDTO> {
     try {
       // Additional security validation beyond schema validation
       SecurityUtils.validateNumericId(command.account_id, "account_id");
@@ -487,11 +481,11 @@ export class TransactionService {
   /**
    * Retrieves a single transaction by ID with joined data
    * @param transactionId - The transaction ID to retrieve
-   * @param userId - The user ID who owns the transaction (defaults to DEFAULT_USER_ID)
+   * @param userId - The user ID who owns the transaction
    * @returns Promise<TransactionDTO | null> - The transaction with joined data or null if not found
    * @throws Error if database query fails or validation fails
    */
-  async getTransactionById(transactionId: number, userId: string = DEFAULT_USER_ID): Promise<TransactionDTO | null> {
+  async getTransactionById(transactionId: number, userId: string): Promise<TransactionDTO | null> {
     try {
       // Validate transaction ID parameter
       SecurityUtils.validateNumericId(transactionId, "transaction_id");
@@ -577,14 +571,11 @@ export class TransactionService {
   /**
    * Retrieves transactions for a user with filtering, sorting, and pagination
    * @param query - Query parameters for filtering and pagination
-   * @param userId - The user ID to filter by (defaults to DEFAULT_USER_ID)
+   * @param userId - The user ID to filter by
    * @returns Promise<ApiCollectionResponse<TransactionDTO>> - Paginated transaction list with metadata
    * @throws Error if database query fails
    */
-  async getTransactions(
-    query: GetTransactionsQuery,
-    userId: string = DEFAULT_USER_ID
-  ): Promise<ApiCollectionResponse<TransactionDTO>> {
+  async getTransactions(query: GetTransactionsQuery, userId: string): Promise<ApiCollectionResponse<TransactionDTO>> {
     try {
       // Set defaults for pagination with bounds checking
       const page = Math.max(1, query.page || 1);
