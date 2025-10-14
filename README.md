@@ -23,6 +23,8 @@ A responsive web application that simplifies personal expense tracking by replac
 - **React**
 - **Tailwind CSS**
 - **Supabase** (Authentication & Database)
+- **Vitest** + **Testing Library** (unit & integration testing)
+- **Playwright** (end-to-end testing)
 
 ## Getting Started
 
