@@ -20,6 +20,7 @@ const isAuthenticated = !!user;
               href="/"
               class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
               aria-current={pathname === "/" ? "page" : undefined}
+              data-testid="nav-transactions-link"
             >
               Transactions
             </a>
@@ -35,6 +36,7 @@ const isAuthenticated = !!user;
               href="/categories"
               class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/categories" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
               aria-current={pathname === "/categories" ? "page" : undefined}
+              data-testid="nav-categories-link"
             >
               Categories
             </a>

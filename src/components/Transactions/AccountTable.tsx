@@ -45,7 +45,7 @@ export default function AccountTable({ accounts }: AccountTableProps) {
   // Handle empty state
   if (accounts.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6 text-center">
+      <div className="bg-white rounded-lg shadow p-6 text-center" data-testid="account-table-empty">
         <h3 className="text-lg font-medium mb-2">No accounts found</h3>
         <p className="text-gray-500">Create an account to get started.</p>
       </div>
@@ -53,9 +53,9 @@ export default function AccountTable({ accounts }: AccountTableProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow overflow-hidden" data-testid="account-table">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full" data-testid="account-table-element">
           <thead>
             <tr className="bg-gray-50 border-b">
               <th className="px-4 py-2 text-left">Account</th>
@@ -65,7 +65,7 @@ export default function AccountTable({ accounts }: AccountTableProps) {
           </thead>
           <tbody>
             {accounts.map((account) => (
-              <tr key={account.id} className="border-b">
+              <tr key={account.id} className="border-b" data-testid={`account-row-${account.id}`}>
                 <td className="px-4 py-2">{account.name}</td>
                 <td className="px-4 py-2 text-right">{formatAmount(account.balance)}</td>
                 <td className="px-4 py-2">{account.currency_code}</td>
@@ -74,7 +74,7 @@ export default function AccountTable({ accounts }: AccountTableProps) {
           </tbody>
           <tfoot className="bg-gray-50">
             {totalsByCurrency?.map((total, index) => (
-              <tr key={index}>
+              <tr key={index} data-testid={`account-total-${total.code}`}>
                 <td className="px-4 py-2 font-medium">Total</td>
                 <td className="px-4 py-2 text-right font-medium">{formatAmount(total.total)}</td>
                 <td className="px-4 py-2">{total.code}</td>

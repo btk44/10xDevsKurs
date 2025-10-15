@@ -60,7 +60,7 @@ export default function TransactionTable({
   // Handle empty state
   if (transactions.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6 text-center">
+      <div className="bg-white rounded-lg shadow p-6 text-center" data-testid="transaction-table-empty">
         <h3 className="text-lg font-medium mb-2">No transactions found</h3>
         <p className="text-gray-500">Try adjusting your filters or add a new transaction.</p>
       </div>
@@ -68,17 +68,25 @@ export default function TransactionTable({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow overflow-hidden" data-testid="transaction-table">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full" data-testid="transaction-table-element">
           <thead>
             <tr className="bg-gray-50 border-b">
-              <th className="px-4 py-2 text-left cursor-pointer" onClick={() => handleSortClick("transaction_date")}>
+              <th
+                className="px-4 py-2 text-left cursor-pointer"
+                onClick={() => handleSortClick("transaction_date")}
+                data-testid="sort-date-header"
+              >
                 Date {getSortIndicator("transaction_date")}
               </th>
               <th className="px-4 py-2 text-left">Account</th>
               <th className="px-4 py-2 text-left">Category</th>
-              <th className="px-4 py-2 text-right cursor-pointer" onClick={() => handleSortClick("amount")}>
+              <th
+                className="px-4 py-2 text-right cursor-pointer"
+                onClick={() => handleSortClick("amount")}
+                data-testid="sort-amount-header"
+              >
                 Amount {getSortIndicator("amount")}
               </th>
               <th className="px-4 py-2 text-center">Currency</th>
@@ -93,6 +101,7 @@ export default function TransactionTable({
                 onMouseEnter={() => setHoveredRowId(transaction.id)}
                 onMouseLeave={() => setHoveredRowId(null)}
                 onDoubleClick={() => onRowDoubleClick(transaction)}
+                data-testid={`transaction-row-${transaction.id}`}
               >
                 <td className="px-4 py-2">{formatDate(transaction.transaction_date)}</td>
                 <td className="px-4 py-2">{transaction.account_name}</td>
@@ -112,7 +121,7 @@ export default function TransactionTable({
         </table>
       </div>
 
-      <div className="p-2 border-t">
+      <div className="p-2 border-t" data-testid="transaction-table-pagination">
         <Pagination pagination={pagination} onPageChange={onPageChange} />
       </div>
     </div>

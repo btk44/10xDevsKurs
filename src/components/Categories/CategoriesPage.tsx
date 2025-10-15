@@ -131,7 +131,7 @@ const CategoriesPage = () => {
   }, [selectedCategory]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="categories-page">
       <div className="mb-6">
         <CategoriesTabs activeType={activeType} onTypeChange={handleTypeChange} />
       </div>

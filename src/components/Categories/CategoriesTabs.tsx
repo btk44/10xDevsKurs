@@ -12,10 +12,14 @@ const CategoriesTabs = ({ activeType, onTypeChange }: CategoriesTabsProps) => {
   };
 
   return (
-    <Tabs value={activeType} onValueChange={handleValueChange} className="w-full">
-      <TabsList className="grid grid-cols-2 w-[400px]">
-        <TabsTrigger value="income">Income</TabsTrigger>
-        <TabsTrigger value="expense">Expense</TabsTrigger>
+    <Tabs value={activeType} onValueChange={handleValueChange} className="w-full" data-testid="categories-tabs">
+      <TabsList className="grid grid-cols-2 w-[400px]" data-testid="categories-tabs-list">
+        <TabsTrigger value="income" data-testid="categories-income-tab">
+          Income
+        </TabsTrigger>
+        <TabsTrigger value="expense" data-testid="categories-expense-tab">
+          Expense
+        </TabsTrigger>
       </TabsList>
     </Tabs>
   );

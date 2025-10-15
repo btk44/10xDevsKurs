@@ -55,14 +55,20 @@ export default function Pagination({ pagination, onPageChange }: PaginationProps
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="text-sm text-gray-500">
+    <div className="flex items-center justify-between" data-testid="pagination">
+      <div className="text-sm text-gray-500" data-testid="pagination-info">
         Page {page} of {total_pages}
       </div>
 
       <div className="flex space-x-1">
         {/* Previous button */}
-        <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page === 1}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page === 1}
+          data-testid="pagination-previous"
+        >
           Previous
         </Button>
 
@@ -71,7 +77,11 @@ export default function Pagination({ pagination, onPageChange }: PaginationProps
           {pageNumbers.map((pageNumber, index) => {
             if (pageNumber === "ellipsis-start" || pageNumber === "ellipsis-end") {
               return (
-                <div key={`${pageNumber}-${index}`} className="flex items-center px-2">
+                <div
+                  key={`${pageNumber}-${index}`}
+                  className="flex items-center px-2"
+                  data-testid={`pagination-ellipsis-${pageNumber}`}
+                >
                   ...
                 </div>
               );
@@ -84,6 +94,7 @@ export default function Pagination({ pagination, onPageChange }: PaginationProps
                 size="sm"
                 onClick={() => onPageChange(pageNumber as number)}
                 className="min-w-[2rem]"
+                data-testid={`pagination-page-${pageNumber}`}
               >
                 {pageNumber}
               </Button>
@@ -92,7 +103,13 @@ export default function Pagination({ pagination, onPageChange }: PaginationProps
         </div>
 
         {/* Next button */}
-        <Button variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={page === total_pages}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page === total_pages}
+          data-testid="pagination-next"
+        >
           Next
         </Button>
       </div>

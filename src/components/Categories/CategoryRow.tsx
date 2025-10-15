@@ -18,7 +18,7 @@ const CategoryRow = ({ category, indentLevel, onEdit, onDelete }: CategoryRowPro
   };
 
   return (
-    <tr className="border-b hover:bg-gray-50">
+    <tr className="border-b hover:bg-gray-50" data-testid={`category-row-${category.id}`}>
       <td className="py-2 px-4">
         <div className="flex items-center">
           {/* Indent based on level */}
@@ -49,7 +49,14 @@ const CategoryRow = ({ category, indentLevel, onEdit, onDelete }: CategoryRowPro
         )}
       </td>
       <td className="py-2 px-4 text-right">
-        <Button variant="ghost" size="sm" onClick={handleEdit} className="mr-2" aria-label={`Edit ${category.name}`}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleEdit}
+          className="mr-2"
+          aria-label={`Edit ${category.name}`}
+          data-testid={`category-edit-button-${category.id}`}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -73,6 +80,7 @@ const CategoryRow = ({ category, indentLevel, onEdit, onDelete }: CategoryRowPro
           onClick={handleDelete}
           className="text-red-600 hover:text-red-800 hover:bg-red-50"
           aria-label={`Delete ${category.name}`}
+          data-testid={`category-delete-button-${category.id}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

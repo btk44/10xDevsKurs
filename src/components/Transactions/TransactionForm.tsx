@@ -210,10 +210,12 @@ export default function TransactionForm({
   const expenseCategories = categories.filter((c) => c.category_type === "expense");
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4">{initialData ? "Edit Transaction" : "New Transaction"}</h2>
+    <div className="bg-white rounded-lg shadow p-6" data-testid="transaction-form">
+      <h2 className="text-xl font-semibold mb-4" data-testid="transaction-form-title">
+        {initialData ? "Edit Transaction" : "New Transaction"}
+      </h2>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} data-testid="transaction-form-element">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           {/* Date Field */}
           <div>
@@ -231,6 +233,7 @@ export default function TransactionForm({
                 errors.transaction_date ? "border-red-500" : "border-gray-300"
               }`}
               required
+              data-testid="transaction-date-input"
             />
             {errors.transaction_date && <p className="text-red-500 text-xs mt-1">{errors.transaction_date}</p>}
           </div>
@@ -248,6 +251,7 @@ export default function TransactionForm({
               onBlur={handleBlur}
               className={`w-full p-2 border rounded-md ${errors.account_id ? "border-red-500" : "border-gray-300"}`}
               required
+              data-testid="transaction-account-select"
             >
               <option value="">Select Account</option>
               {accounts.map((account) => (
@@ -272,6 +276,7 @@ export default function TransactionForm({
               onBlur={handleBlur}
               className={`w-full p-2 border rounded-md ${errors.category_id ? "border-red-500" : "border-gray-300"}`}
               required
+              data-testid="transaction-category-select"
             >
               <option value="">Select Category</option>
 
@@ -310,6 +315,7 @@ export default function TransactionForm({
               min="0.01"
               className={`w-full p-2 border rounded-md ${errors.amount ? "border-red-500" : "border-gray-300"}`}
               required
+              data-testid="transaction-amount-input"
             />
             {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
           </div>
@@ -328,6 +334,7 @@ export default function TransactionForm({
               onBlur={handleBlur}
               maxLength={255}
               className={`w-full p-2 border rounded-md ${errors.comment ? "border-red-500" : "border-gray-300"}`}
+              data-testid="transaction-comment-input"
             />
             {errors.comment && <p className="text-red-500 text-xs mt-1">{errors.comment}</p>}
           </div>
@@ -335,16 +342,22 @@ export default function TransactionForm({
 
         <div className="flex justify-between">
           <div>
-            <Button type="submit" variant="default">
+            <Button type="submit" variant="default" data-testid="transaction-submit-button">
               {initialData ? "Update" : "Save"}
             </Button>
-            <Button type="button" variant="outline" className="ml-2" onClick={onCancel}>
+            <Button
+              type="button"
+              variant="outline"
+              className="ml-2"
+              onClick={onCancel}
+              data-testid="transaction-cancel-button"
+            >
               Cancel
             </Button>
           </div>
 
           {initialData && onDelete && (
-            <Button type="button" variant="destructive" onClick={handleDelete}>
+            <Button type="button" variant="destructive" onClick={handleDelete} data-testid="transaction-delete-button">
               Delete
             </Button>
           )}

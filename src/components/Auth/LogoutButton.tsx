@@ -33,6 +33,7 @@ export default function LogoutButton() {
       disabled={isLoading}
       variant="ghost"
       className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-slate-700 hover:text-white"
+      data-testid="logout-button"
     >
       {isLoading ? "Logging out..." : "Logout"}
     </Button>

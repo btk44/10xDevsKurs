@@ -12,7 +12,7 @@ export class NavigationPage {
     this.page = page;
     this.transactionsLink = page.getByRole("link", { name: "Transactions" });
     this.accountsLink = page.getByTestId("nav-accounts-link");
-    this.categoriesLink = page.getByRole("link", { name: "Categories" });
+    this.categoriesLink = page.getByTestId("nav-categories-link");
     this.userEmail = page.locator("span.text-sm.text-gray-300");
     this.logoutButton = page.getByRole("button", { name: /logout/i });
   }

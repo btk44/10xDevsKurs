@@ -123,10 +123,10 @@ export default function CategoryForm({
   const isEditing = !!initialData?.id;
 
   return (
-    <div className="bg-white p-6 rounded-lg border shadow-sm">
+    <div className="bg-white p-6 rounded-lg border shadow-sm" data-testid="category-form-container">
       <h2 className="text-xl font-semibold mb-4">{isEditing ? "Edit Category" : "Create New Category"}</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" data-testid="category-form">
         <div>
           <label htmlFor="name" className="block text-sm font-medium mb-1">
             Category Name *
@@ -140,6 +140,7 @@ export default function CategoryForm({
             className={`w-full px-3 py-2 border rounded-md ${localErrors.name ? "border-red-500" : "border-gray-300"}`}
             aria-invalid={!!localErrors.name}
             aria-describedby={localErrors.name ? "name-error" : undefined}
+            data-testid="category-name-input"
           />
           {localErrors.name && (
             <p id="name-error" className="mt-1 text-sm text-red-600">
@@ -162,6 +163,7 @@ export default function CategoryForm({
             maxLength={10}
             aria-invalid={!!localErrors.tag}
             aria-describedby={localErrors.tag ? "tag-error" : undefined}
+            data-testid="category-tag-input"
           />
           {localErrors.tag && (
             <p id="tag-error" className="mt-1 text-sm text-red-600">
@@ -185,6 +187,7 @@ export default function CategoryForm({
             }`}
             aria-invalid={!!localErrors.parent_id}
             aria-describedby={localErrors.parent_id ? "parent-error" : undefined}
+            data-testid="category-parent-select"
           >
             <option value={0}>None (Main Category)</option>
             {parentOptions.map((option) => (
@@ -208,10 +211,10 @@ export default function CategoryForm({
         <input type="hidden" name="category_type" value={formData.category_type} />
 
         <div className="flex justify-end space-x-3 pt-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} data-testid="category-cancel-button">
             Cancel
           </Button>
-          <Button type="submit" disabled={!isFormValid || isSubmitting}>
+          <Button type="submit" disabled={!isFormValid || isSubmitting} data-testid="category-submit-button">
             {isSubmitting ? "Saving..." : isEditing ? "Update Category" : "Create Category"}
           </Button>
         </div>

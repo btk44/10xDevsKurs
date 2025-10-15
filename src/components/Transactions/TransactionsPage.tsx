@@ -134,12 +134,12 @@ export default function TransactionsPage() {
 
   if (hasError) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg" data-testid="transactions-error">
         <h2 className="text-lg font-semibold text-red-600 mb-2">Error loading data</h2>
         <p className="text-red-700 mb-4">
           {transactionsError?.message || accountsError?.message || categoriesError?.message || mutationError?.message}
         </p>
-        <Button onClick={() => window.location.reload()} variant="destructive">
+        <Button onClick={() => window.location.reload()} variant="destructive" data-testid="transactions-retry-button">
           Retry
         </Button>
       </div>
@@ -147,36 +147,39 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4" data-testid="transactions-page">
       <div className="flex justify-between items-center mb-4">
-        <Button onClick={() => setShowFilterModal(true)} variant="outline">
+        <Button onClick={() => setShowFilterModal(true)} variant="outline" data-testid="filter-button">
           Filter
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center h-64" data-testid="transactions-loading">
           <div className="flex flex-col items-center">
             <div className="h-12 w-12 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-gray-500">Loading data...</p>
           </div>
         </div>
       ) : transactions.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 text-center">
+        <div className="bg-white rounded-lg shadow p-6 text-center" data-testid="transactions-empty-state">
           <h3 className="text-lg font-medium mb-2">No transactions found</h3>
           <p className="text-gray-500 mb-4">
             {filters.date_from || filters.date_to || filters.account_id || filters.category_id || filters.search
               ? "Try adjusting your filters or add a new transaction."
               : "Start by adding your first transaction."}
           </p>
-          <Button onClick={() => setFilters({ page: 1, limit: 10, sort: "transaction_date:desc" as SortOption })}>
+          <Button
+            onClick={() => setFilters({ page: 1, limit: 10, sort: "transaction_date:desc" as SortOption })}
+            data-testid="clear-filters-button"
+          >
             Clear Filters
           </Button>
         </div>
       ) : (
-        <div className="lg:grid lg:grid-cols-5 lg:gap-4">
+        <div className="lg:grid lg:grid-cols-5 lg:gap-4" data-testid="transactions-content">
           {/* Left Column (3/5) */}
-          <div className="mb-4 lg:mb-0 lg:col-span-3">
+          <div className="mb-4 lg:mb-0 lg:col-span-3" data-testid="transactions-left-column">
             <TransactionTable
               transactions={transactions}
               pagination={pagination}
@@ -186,7 +189,7 @@ export default function TransactionsPage() {
               onRowDoubleClick={handleRowDoubleClick}
             />
 
-            <div className="mt-6">
+            <div className="mt-6" data-testid="transactions-form-container">
               <TransactionForm
                 accounts={accounts}
                 categories={categories}
@@ -199,7 +202,7 @@ export default function TransactionsPage() {
           </div>
 
           {/* Right Column (2/5) */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" data-testid="transactions-right-column">
             <AccountTable accounts={accounts} />
           </div>
         </div>

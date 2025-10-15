@@ -28,46 +28,46 @@ export default function FilterModal({
   accounts = [],
   categories = [],
   onApply,
-  onCancel
+  onCancel,
 }: FilterModalProps) {
   // State for filter values
   const [filters, setFilters] = useState<GetTransactionsQuery>({
-    ...initialFilters
+    ...initialFilters,
   });
-  
+
   // Validation errors
   const [errors, setErrors] = useState<FilterErrors>({});
-  
+
   // Reset filters when modal opens with new initialFilters
   useEffect(() => {
     setFilters({ ...initialFilters });
     setErrors({});
   }, [initialFilters, isOpen]);
-  
+
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     // Handle different input types
-    if (type === 'date') {
-      setFilters(prev => ({ ...prev, [name]: value || undefined }));
-    } else if (name === 'account_id' || name === 'category_id') {
+    if (type === "date") {
+      setFilters((prev) => ({ ...prev, [name]: value || undefined }));
+    } else if (name === "account_id" || name === "category_id") {
       const numValue = value ? parseInt(value, 10) : undefined;
-      setFilters(prev => ({ ...prev, [name]: numValue }));
+      setFilters((prev) => ({ ...prev, [name]: numValue }));
     } else {
-      setFilters(prev => ({ ...prev, [name]: value || undefined }));
+      setFilters((prev) => ({ ...prev, [name]: value || undefined }));
     }
-    
+
     // Clear error for this field
     if (errors[name as keyof FilterErrors]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
-  
+
   // Validate filters before applying
   const validateFilters = (): boolean => {
     const newErrors: FilterErrors = {};
-    
+
     // Validate date range
     if (filters.date_from && filters.date_to) {
       if (new Date(filters.date_from) > new Date(filters.date_to)) {
@@ -75,74 +75,74 @@ export default function FilterModal({
         newErrors.date_to = "End date must be after start date";
       }
     }
-    
+
     // Validate search text length
     if (filters.search && filters.search.length > 100) {
       newErrors.search = "Search text must be 100 characters or less";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   // Validate a single field
   const validateField = (name: string, value: any): string | undefined => {
     // Date range validation
-    if (name === 'date_from' && filters.date_to && value) {
+    if (name === "date_from" && filters.date_to && value) {
       if (new Date(value) > new Date(filters.date_to)) {
         return "Start date must be before end date";
       }
     }
-    
-    if (name === 'date_to' && filters.date_from && value) {
+
+    if (name === "date_to" && filters.date_from && value) {
       if (new Date(filters.date_from) > new Date(value)) {
         return "End date must be after start date";
       }
     }
-    
+
     // Search text length validation
-    if (name === 'search' && value && value.length > 100) {
+    if (name === "search" && value && value.length > 100) {
       return "Search text must be 100 characters or less";
     }
-    
+
     return undefined;
   };
-  
+
   // Handle field blur for validation
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const errorMessage = validateField(name, value);
-    
-    setErrors(prev => ({
+
+    setErrors((prev) => ({
       ...prev,
-      [name]: errorMessage
+      [name]: errorMessage,
     }));
   };
-  
+
   // Handle apply button click
   const handleApply = () => {
     if (validateFilters()) {
       onApply(filters);
     }
   };
-  
+
   // Handle reset button click
   const handleReset = () => {
     setFilters({
       page: 1,
       limit: initialFilters.limit || 10,
-      sort: initialFilters.sort || "transaction_date:desc"
+      sort: initialFilters.sort || "transaction_date:desc",
     });
     setErrors({});
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" data-testid="filter-modal">
         <DialogHeader>
-          <DialogTitle>Filter Transactions</DialogTitle>
+          <DialogTitle data-testid="filter-modal-title">Filter Transactions</DialogTitle>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           {/* Date Range */}
           <div className="grid grid-cols-2 gap-4">
@@ -154,18 +154,15 @@ export default function FilterModal({
                 type="date"
                 id="date_from"
                 name="date_from"
-              value={filters.date_from || ""}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              className={`w-full p-2 border rounded-md ${
-                errors.date_from ? "border-red-500" : "border-gray-300"
-              }`}
+                value={filters.date_from || ""}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={`w-full p-2 border rounded-md ${errors.date_from ? "border-red-500" : "border-gray-300"}`}
+                data-testid="filter-date-from-input"
               />
-              {errors.date_from && (
-                <p className="text-red-500 text-xs mt-1">{errors.date_from}</p>
-              )}
+              {errors.date_from && <p className="text-red-500 text-xs mt-1">{errors.date_from}</p>}
             </div>
-            
+
             <div>
               <label htmlFor="date_to" className="block text-sm font-medium mb-1">
                 To Date
@@ -174,19 +171,16 @@ export default function FilterModal({
                 type="date"
                 id="date_to"
                 name="date_to"
-              value={filters.date_to || ""}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              className={`w-full p-2 border rounded-md ${
-                errors.date_to ? "border-red-500" : "border-gray-300"
-              }`}
+                value={filters.date_to || ""}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={`w-full p-2 border rounded-md ${errors.date_to ? "border-red-500" : "border-gray-300"}`}
+                data-testid="filter-date-to-input"
               />
-              {errors.date_to && (
-                <p className="text-red-500 text-xs mt-1">{errors.date_to}</p>
-              )}
+              {errors.date_to && <p className="text-red-500 text-xs mt-1">{errors.date_to}</p>}
             </div>
           </div>
-          
+
           {/* Account and Category */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -199,16 +193,17 @@ export default function FilterModal({
                 value={filters.account_id || ""}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded-md"
+                data-testid="filter-account-select"
               >
                 <option value="">All Accounts</option>
-                {accounts.map(account => (
+                {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
                 ))}
               </select>
             </div>
-            
+
             <div>
               <label htmlFor="category_id" className="block text-sm font-medium mb-1">
                 Category
@@ -219,12 +214,13 @@ export default function FilterModal({
                 value={filters.category_id || ""}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded-md"
+                data-testid="filter-category-select"
               >
                 <option value="">All Categories</option>
                 <optgroup label="Income">
                   {categories
-                    .filter(c => c.category_type === 'income')
-                    .map(category => (
+                    .filter((c) => c.category_type === "income")
+                    .map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
                       </option>
@@ -232,8 +228,8 @@ export default function FilterModal({
                 </optgroup>
                 <optgroup label="Expense">
                   {categories
-                    .filter(c => c.category_type === 'expense')
-                    .map(category => (
+                    .filter((c) => c.category_type === "expense")
+                    .map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
                       </option>
@@ -242,7 +238,7 @@ export default function FilterModal({
               </select>
             </div>
           </div>
-          
+
           {/* Search Text */}
           <div>
             <label htmlFor="search" className="block text-sm font-medium mb-1">
@@ -257,24 +253,21 @@ export default function FilterModal({
               onBlur={handleBlur}
               placeholder="Search in comments..."
               maxLength={100}
-              className={`w-full p-2 border rounded-md ${
-                errors.search ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full p-2 border rounded-md ${errors.search ? "border-red-500" : "border-gray-300"}`}
+              data-testid="filter-search-input"
             />
-            {errors.search && (
-              <p className="text-red-500 text-xs mt-1">{errors.search}</p>
-            )}
+            {errors.search && <p className="text-red-500 text-xs mt-1">{errors.search}</p>}
           </div>
         </div>
-        
+
         <DialogFooter>
-          <Button variant="outline" onClick={handleReset} type="button">
+          <Button variant="outline" onClick={handleReset} type="button" data-testid="filter-reset-button">
             Reset
           </Button>
-          <Button variant="outline" onClick={onCancel} type="button">
+          <Button variant="outline" onClick={onCancel} type="button" data-testid="filter-cancel-button">
             Cancel
           </Button>
-          <Button onClick={handleApply} type="button">
+          <Button onClick={handleApply} type="button" data-testid="filter-apply-button">
             Apply
           </Button>
         </DialogFooter>
