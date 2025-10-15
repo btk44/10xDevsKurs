@@ -27,6 +27,7 @@ const isAuthenticated = !!user;
               href="/accounts"
               class={`px-3 py-2 rounded-md text-sm font-medium ${pathname === "/accounts" ? "bg-slate-900 text-white" : "text-gray-300 hover:bg-slate-700 hover:text-white"}`}
               aria-current={pathname === "/accounts" ? "page" : undefined}
+              data-testid="nav-accounts-link"
             >
               Accounts
             </a>

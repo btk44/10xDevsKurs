@@ -115,10 +115,12 @@ export default function AccountForm({
   const isEditing = !!account;
 
   return (
-    <div className="bg-white p-6 rounded-lg border shadow-sm">
-      <h2 className="text-xl font-semibold mb-4">{isEditing ? "Edit Account" : "Create New Account"}</h2>
+    <div className="bg-white p-6 rounded-lg border shadow-sm" data-testid="account-form-container">
+      <h2 className="text-xl font-semibold mb-4" data-testid="account-form-title">
+        {isEditing ? "Edit Account" : "Create New Account"}
+      </h2>
 
-      <form role="form" onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" data-testid="account-form">
         <div>
           <label htmlFor="name" className="block text-sm font-medium mb-1">
             Account Name *
@@ -132,9 +134,10 @@ export default function AccountForm({
             className={`w-full px-3 py-2 border rounded-md ${localErrors.name ? "border-red-500" : "border-gray-300"}`}
             aria-invalid={!!localErrors.name}
             aria-describedby={localErrors.name ? "name-error" : undefined}
+            data-testid="account-name-input"
           />
           {localErrors.name && (
-            <p id="name-error" className="mt-1 text-sm text-red-600">
+            <p id="name-error" className="mt-1 text-sm text-red-600" data-testid="account-name-error">
               {localErrors.name}
             </p>
           )}
@@ -154,16 +157,17 @@ export default function AccountForm({
             }`}
             aria-invalid={!!localErrors.currency_id}
             aria-describedby={localErrors.currency_id ? "currency-error" : undefined}
+            data-testid="account-currency-select"
           >
             <option value="">Select Currency</option>
             {currencies.map((currency) => (
-              <option key={currency.id} value={currency.id}>
+              <option key={currency.id} value={currency.id} data-testid={`currency-option-${currency.id}`}>
                 {currency.code} - {currency.description}
               </option>
             ))}
           </select>
           {localErrors.currency_id && (
-            <p id="currency-error" className="mt-1 text-sm text-red-600">
+            <p id="currency-error" className="mt-1 text-sm text-red-600" data-testid="account-currency-error">
               {localErrors.currency_id}
             </p>
           )}
@@ -183,9 +187,10 @@ export default function AccountForm({
             maxLength={10}
             aria-invalid={!!localErrors.tag}
             aria-describedby={localErrors.tag ? "tag-error" : undefined}
+            data-testid="account-tag-input"
           />
           {localErrors.tag && (
-            <p id="tag-error" className="mt-1 text-sm text-red-600">
+            <p id="tag-error" className="mt-1 text-sm text-red-600" data-testid="account-tag-error">
               {localErrors.tag}
             </p>
           )}
@@ -193,10 +198,10 @@ export default function AccountForm({
         </div>
 
         <div className="flex justify-end space-x-3 pt-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} data-testid="account-cancel-button">
             Cancel
           </Button>
-          <Button type="submit" disabled={!isFormValid || isSaving}>
+          <Button type="submit" disabled={!isFormValid || isSaving} data-testid="account-submit-button">
             {isSaving ? "Saving..." : isEditing ? "Update Account" : "Create Account"}
           </Button>
         </div>

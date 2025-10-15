@@ -147,9 +147,11 @@ export default function AccountsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="accounts-page-container">
       {isLoading ? (
-        <div className="text-center py-8">Loading accounts...</div>
+        <div className="text-center py-8" data-testid="accounts-loading">
+          Loading accounts...
+        </div>
       ) : (
         <AccountList accounts={accounts} onEdit={handleEdit} onDelete={handleDelete} />
       )}

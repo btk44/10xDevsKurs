@@ -54,27 +54,43 @@ export default function AccountList({ accounts, onEdit, onDelete }: AccountListP
 
   if (accountsArray.length === 0) {
     return (
-      <div className="text-center py-8 border rounded-lg bg-gray-50">
+      <div className="text-center py-8 border rounded-lg bg-gray-50" data-testid="no-accounts-message">
         <p className="text-gray-500">No accounts found. Create your first account above.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse" role="table">
+    <div className="overflow-x-auto" data-testid="accounts-list-container">
+      <table className="w-full border-collapse" role="table" data-testid="accounts-table">
         <thead>
           <tr className="bg-gray-100 border-b">
-            <th className="px-4 py-2 text-left cursor-pointer" onClick={() => handleSort("name")}>
+            <th
+              className="px-4 py-2 text-left cursor-pointer"
+              onClick={() => handleSort("name")}
+              data-testid="sort-name-header"
+            >
               Name{getSortIndicator("name")}
             </th>
-            <th className="px-4 py-2 text-left cursor-pointer" onClick={() => handleSort("currency_code")}>
+            <th
+              className="px-4 py-2 text-left cursor-pointer"
+              onClick={() => handleSort("currency_code")}
+              data-testid="sort-currency-header"
+            >
               Currency{getSortIndicator("currency_code")}
             </th>
-            <th className="px-4 py-2 text-right cursor-pointer" onClick={() => handleSort("balance")}>
+            <th
+              className="px-4 py-2 text-right cursor-pointer"
+              onClick={() => handleSort("balance")}
+              data-testid="sort-balance-header"
+            >
               Balance{getSortIndicator("balance")}
             </th>
-            <th className="px-4 py-2 text-left cursor-pointer" onClick={() => handleSort("created_at")}>
+            <th
+              className="px-4 py-2 text-left cursor-pointer"
+              onClick={() => handleSort("created_at")}
+              data-testid="sort-created-header"
+            >
               Created{getSortIndicator("created_at")}
             </th>
             <th className="px-4 py-2 text-right">Actions</th>
@@ -82,15 +98,26 @@ export default function AccountList({ accounts, onEdit, onDelete }: AccountListP
         </thead>
         <tbody>
           {sortedAccounts.map((account) => (
-            <tr key={account.id} className="border-b hover:bg-gray-50">
-              <td className="px-4 py-2">{account.name || ""}</td>
-              <td className="px-4 py-2">{account.currency_code || ""}</td>
-              <td className="px-4 py-2 text-right">{(account.balance || 0).toFixed(2)}</td>
-              <td className="px-4 py-2">
+            <tr key={account.id} className="border-b hover:bg-gray-50" data-testid={`account-row-${account.id}`}>
+              <td className="px-4 py-2" data-testid={`account-name-${account.id}`}>
+                {account.name || ""}
+              </td>
+              <td className="px-4 py-2" data-testid={`account-currency-${account.id}`}>
+                {account.currency_code || ""}
+              </td>
+              <td className="px-4 py-2 text-right" data-testid={`account-balance-${account.id}`}>
+                {(account.balance || 0).toFixed(2)}
+              </td>
+              <td className="px-4 py-2" data-testid={`account-created-${account.id}`}>
                 {account.created_at ? new Date(account.created_at).toLocaleDateString() : ""}
               </td>
               <td className="px-4 py-2 text-right space-x-2">
-                <Button variant="outline" size="sm" onClick={() => onEdit(account)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(account)}
+                  data-testid={`edit-account-${account.id}`}
+                >
                   Edit
                 </Button>
                 <Button
@@ -99,6 +126,7 @@ export default function AccountList({ accounts, onEdit, onDelete }: AccountListP
                   onClick={() => onDelete(account)}
                   disabled={!account.active}
                   className={!account.active ? "opacity-50 cursor-not-allowed" : ""}
+                  data-testid={`delete-account-${account.id}`}
                 >
                   Delete
                 </Button>

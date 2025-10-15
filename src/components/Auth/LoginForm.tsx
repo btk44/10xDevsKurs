@@ -81,10 +81,15 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="w-full max-w-md mx-auto" data-testid="login-form-container">
+      <form onSubmit={handleSubmit} className="space-y-4" data-testid="login-form">
         {errors.general && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{errors.general}</div>
+          <div
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+            data-testid="login-general-error"
+          >
+            {errors.general}
+          </div>
         )}
 
         <div>
@@ -99,8 +104,13 @@ export default function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             aria-invalid={!!errors.email}
+            data-testid="login-email-input"
           />
-          {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600" data-testid="login-email-error">
+              {errors.email}
+            </p>
+          )}
         </div>
 
         <div>
@@ -115,25 +125,43 @@ export default function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             aria-invalid={!!errors.password}
+            data-testid="login-password-input"
           />
-          {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600" data-testid="login-password-error">
+              {errors.password}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
           <div className="text-sm">
-            <a href="/auth/reset-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <a
+              href="/auth/reset-password"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+              data-testid="login-forgot-password-link"
+            >
               Forgot password?
             </a>
           </div>
           <div className="text-sm">
-            <a href="/auth/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <a
+              href="/auth/register"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+              data-testid="login-register-link"
+            >
               Register
             </a>
           </div>
         </div>
 
         <div>
-          <Button type="submit" disabled={isLoading} className="w-full flex justify-center py-2 px-4">
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-2 px-4"
+            data-testid="login-submit-button"
+          >
             {isLoading ? "Logging in..." : "Log in"}
           </Button>
         </div>

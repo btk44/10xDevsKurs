@@ -1,7 +1,7 @@
 export const testUsers = {
   standard: {
-    email: "test@example.com",
-    password: "Password123!",
+    email: "testuser@example.com",
+    password: "pass",
   },
 };
 
