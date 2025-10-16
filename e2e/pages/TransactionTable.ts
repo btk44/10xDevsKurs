@@ -116,4 +116,22 @@ export class TransactionTable {
   async getTransactionComment(transactionId: number): Promise<string | null> {
     return await this.getTransactionCellValue(transactionId, 5);
   }
+
+  async getEditButton(transactionId: number): Promise<Locator> {
+    return this.page.getByTestId(`transaction-edit-button-${transactionId}`);
+  }
+
+  async getDeleteButton(transactionId: number): Promise<Locator> {
+    return this.page.getByTestId(`transaction-delete-button-${transactionId}`);
+  }
+
+  async clickEditButton(transactionId: number): Promise<void> {
+    const button = await this.getEditButton(transactionId);
+    await button.click();
+  }
+
+  async clickDeleteButton(transactionId: number): Promise<void> {
+    const button = await this.getDeleteButton(transactionId);
+    await button.click();
+  }
 }

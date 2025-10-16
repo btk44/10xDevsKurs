@@ -25,7 +25,7 @@ const DeleteConfirmationModal = ({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
-      <DialogContent>
+      <DialogContent data-testid="delete-category-modal">
         <DialogHeader>
           <DialogTitle>Delete Category</DialogTitle>
           <DialogDescription>
@@ -45,10 +45,22 @@ const DeleteConfirmationModal = ({
         )}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isDeleting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isDeleting}
+            data-testid="delete-modal-cancel"
+          >
             Cancel
           </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm} disabled={isDeleting}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            data-testid="delete-modal-confirm"
+          >
             {isDeleting ? "Deleting..." : "Delete Category"}
           </Button>
         </DialogFooter>

@@ -1,20 +1,19 @@
 import { test, expect } from "@playwright/test";
-import { LoginPage, NavigationPage, CategoriesPage, CategoryForm, CategoryList } from "./index";
-import { testUsers } from "../fixtures/test-users";
+import { NavigationPage, CategoriesPage, CategoryForm, CategoryList, DeleteCategoryDialog } from "./index";
 
 test.describe("Categories Management", () => {
-  let loginPage: LoginPage;
   let navigationPage: NavigationPage;
   let categoriesPage: CategoriesPage;
   let categoryForm: CategoryForm;
   let categoryList: CategoryList;
+  let deleteModal: DeleteCategoryDialog;
 
   test.beforeEach(async ({ page }) => {
-    loginPage = new LoginPage(page);
     navigationPage = new NavigationPage(page);
     categoriesPage = new CategoriesPage(page);
     categoryForm = new CategoryForm(page);
     categoryList = new CategoryList(page);
+    deleteModal = new DeleteCategoryDialog(page);
 
     // Login first
     //await loginPage.goto();
@@ -90,5 +89,109 @@ test.describe("Categories Management", () => {
     await categoriesPage.switchToExpenseTab();
     await expect(categoriesPage.expenseTab).toHaveAttribute("data-state", "active");
     await expect(categoriesPage.incomeTab).not.toHaveAttribute("data-state", "active");
+  });
+
+  test("should create and delete a category", async ({ page }) => {
+    // Navigate to categories page
+    await navigationPage.gotoCategories();
+
+    // Switch to expense tab
+    await categoriesPage.switchToExpenseTab();
+    await expect(categoriesPage.expenseTab).toHaveAttribute("data-state", "active");
+
+    // Wait for categories to load
+    await categoriesPage.waitForCategoriesToLoad();
+
+    // Get initial category count
+    const initialCount = await categoryList.getCategoryCount();
+
+    // Create a new category for testing deletion
+    const categoryName = `Delete Test ${Date.now()}`;
+    const categoryTag = "DELTEST";
+
+    await categoryForm.createCategory(categoryName, categoryTag);
+
+    // Wait for the category to appear in the list
+    await page.waitForTimeout(1000);
+
+    // Verify the category was created
+    expect(await categoryList.isCategoryVisible(categoryName)).toBe(true);
+    expect(await categoryList.getCategoryCount()).toBe(initialCount + 1);
+
+    // Get the category ID for deletion
+    const categoryId = await categoryList.getCategoryIdByName(categoryName);
+    expect(categoryId).toBeTruthy();
+
+    // Click delete button for the category
+    await categoryList.clickDeleteCategory(parseInt(categoryId!));
+
+    // Verify the delete confirmation modal appears
+    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
+
+    // Verify modal content
+    const title = await deleteModal.getTitle();
+    expect(title).toContain("Delete Category");
+
+    const description = await deleteModal.getDescription();
+    expect(description).toContain(categoryName);
+
+    // Confirm deletion
+    await deleteModal.confirm();
+
+    // Wait for deletion to complete
+    await page.waitForTimeout(1000);
+
+    // Verify the category is no longer in the list
+    expect(await categoryList.isCategoryVisible(categoryName)).toBe(false);
+
+    // Verify the category count decreased
+    const finalCount = await categoryList.getCategoryCount();
+    expect(finalCount).toBe(initialCount);
+
+    // Verify modal is closed
+    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
+  });
+
+  test("should cancel category deletion", async ({ page }) => {
+    // Navigate to categories page
+    await navigationPage.gotoCategories();
+
+    // Switch to expense tab
+    await categoriesPage.switchToExpenseTab();
+
+    // Wait for categories to load
+    await categoriesPage.waitForCategoriesToLoad();
+
+    // Get initial category count
+    const initialCount = await categoryList.getCategoryCount();
+
+    // Create a new category for testing cancel deletion
+    const categoryName = `Cancel Delete Test ${Date.now()}`;
+
+    await categoryForm.createCategory(categoryName);
+
+    // Wait for the category to appear
+    await page.waitForTimeout(1000);
+    expect(await categoryList.isCategoryVisible(categoryName)).toBe(true);
+
+    // Get the category ID and click delete
+    const categoryId = await categoryList.getCategoryIdByName(categoryName);
+    await categoryList.clickDeleteCategory(parseInt(categoryId!));
+
+    // Verify modal appears
+    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
+
+    // Cancel the deletion
+    await deleteModal.cancel();
+
+    // Verify modal is closed
+    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
+
+    // Verify the category is still in the list
+    expect(await categoryList.isCategoryVisible(categoryName)).toBe(true);
+
+    // Verify count hasn't changed
+    const finalCount = await categoryList.getCategoryCount();
+    expect(finalCount).toBe(initialCount + 1);
   });
 });
