@@ -6,6 +6,6 @@ import AccountsPage from "../components/Accounts/AccountsPage";
 <Layout title="Accounts | Finance Tracker">
   <main class="container mx-auto px-4 py-8" data-testid="accounts-page">
     <h1 class="text-3xl font-bold mb-6" data-testid="accounts-page-title">Accounts</h1>
-    <AccountsPage client:load />
+    <AccountsPage client:only="react" />
   </main>
 </Layout>

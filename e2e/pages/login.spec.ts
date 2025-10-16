@@ -20,39 +20,25 @@ test.describe("Login Page", () => {
 
   test("should login successfully with valid credentials", async () => {
     // Attempt to login with test user credentials
-    try {
-      await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+    await loginPage.login(testUsers.standard.email, testUsers.standard.password);
 
-      // Check for elements that indicate successful login
-      // This could be a logout button, user menu, or main app content
-      const logoutButtonVisible = await loginPage.page
-        .getByRole("button", { name: /logout/i })
-        .isVisible()
-        .catch(() => false);
-      const transactionsLinkVisible = await loginPage.page
-        .getByRole("link", { name: "Transactions" })
-        .isVisible()
-        .catch(() => false);
-      const accountsLinkVisible = await loginPage.page
-        .getByRole("link", { name: "Accounts" })
-        .isVisible()
-        .catch(() => false);
+    // Check for elements that indicate successful login
+    // This could be a logout button, user menu, or main app content
+    const logoutButtonVisible = await loginPage.page
+      .getByRole("button", { name: /logout/i })
+      .isVisible()
+      .catch(() => false);
+    const transactionsLinkVisible = await loginPage.page
+      .getByRole("link", { name: "Transactions" })
+      .isVisible()
+      .catch(() => false);
+    const accountsLinkVisible = await loginPage.page
+      .getByRole("link", { name: "Accounts" })
+      .isVisible()
+      .catch(() => false);
 
-      // At least one indicator of successful login should be present
-      await expect(logoutButtonVisible || transactionsLinkVisible || accountsLinkVisible).toBe(true);
-
-      console.log("Login test passed - user successfully authenticated");
-    } catch {
-      // Login method threw an error, likely due to invalid credentials
-      console.log("Login failed - likely due to invalid credentials or auth setup");
-
-      // Verify we're still on the login page
-      await expect(loginPage.page).toHaveURL(/\/auth\/login/);
-      await expect(loginPage.form).toBeVisible();
-
-      // The test passes as long as we handle the failure gracefully
-      // In a real environment with proper test users, this would succeed
-    }
+    // At least one indicator of successful login should be present
+    await expect(logoutButtonVisible || transactionsLinkVisible || accountsLinkVisible).toBe(true);
   });
 
   test("should show error with invalid credentials", async () => {

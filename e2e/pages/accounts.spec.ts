@@ -1,19 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { AccountForm } from "./AccountForm";
 import { AccountsPage } from "./AccountsPage";
-import { LoginPage } from "./LoginPage";
 import { testUsers } from "e2e/fixtures/test-users";
 
 test.describe("Account Page E2E Tests", () => {
   let accountForm: AccountForm;
   let accountsPage: AccountsPage;
-  let loginPage: LoginPage;
 
   test.beforeEach(async ({ page }) => {
-    loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.login(testUsers.standard.email, testUsers.standard.password);
-
     accountForm = new AccountForm(page);
     accountsPage = new AccountsPage(page);
   });

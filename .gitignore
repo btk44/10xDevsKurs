@@ -6,6 +6,8 @@ dist/
 
 # dependencies
 node_modules/
+test-results/
+playwright-report/
 
 # logs
 npm-debug.log*
@@ -23,3 +25,5 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+playwright/.auth
