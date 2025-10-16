@@ -1,15 +1,13 @@
 import { test, expect } from "@playwright/test";
-import { NavigationPage, CategoriesPage, CategoryForm, CategoryList, DeleteCategoryDialog } from "./index";
+import { CategoriesPage, CategoryForm, CategoryList, DeleteCategoryDialog } from "./index";
 
 test.describe("Categories Management", () => {
-  let navigationPage: NavigationPage;
   let categoriesPage: CategoriesPage;
   let categoryForm: CategoryForm;
   let categoryList: CategoryList;
   let deleteModal: DeleteCategoryDialog;
 
   test.beforeEach(async ({ page }) => {
-    navigationPage = new NavigationPage(page);
     categoriesPage = new CategoriesPage(page);
     categoryForm = new CategoryForm(page);
     categoryList = new CategoryList(page);
@@ -22,8 +20,8 @@ test.describe("Categories Management", () => {
 
   test("should create a new expense category and verify it appears in the list", async ({ page }) => {
     // Navigate to categories page
-    await navigationPage.gotoCategories();
-
+    await categoriesPage.goto();
+    await categoriesPage.page.waitForLoadState("networkidle");
     // Verify categories page is loaded
     await expect(categoriesPage.pageContainer).toBeVisible();
 
@@ -62,8 +60,8 @@ test.describe("Categories Management", () => {
   test("should display empty state when no categories exist", async () => {
     // This test would need to be run with a clean database or mock API
     // For demonstration purposes, we'll just check the structure exists
-    await navigationPage.gotoCategories();
-
+    await categoriesPage.goto();
+    await categoriesPage.page.waitForLoadState("networkidle");
     // If categories exist, the empty message won't be visible
     // If no categories exist, the empty message should be visible
     const hasEmptyMessage = await categoryList.emptyMessage.isVisible();
@@ -75,8 +73,8 @@ test.describe("Categories Management", () => {
   });
 
   test("should switch between income and expense tabs", async () => {
-    await navigationPage.gotoCategories();
-
+    await categoriesPage.goto();
+    await categoriesPage.page.waitForLoadState("networkidle");
     // Initially should be on expense tab (default)
     await expect(categoriesPage.expenseTab).toHaveAttribute("data-state", "active");
 
@@ -93,8 +91,8 @@ test.describe("Categories Management", () => {
 
   test("should create and delete a category", async ({ page }) => {
     // Navigate to categories page
-    await navigationPage.gotoCategories();
-
+    await categoriesPage.goto();
+    await categoriesPage.page.waitForLoadState("networkidle");
     // Switch to expense tab
     await categoriesPage.switchToExpenseTab();
     await expect(categoriesPage.expenseTab).toHaveAttribute("data-state", "active");
@@ -154,8 +152,8 @@ test.describe("Categories Management", () => {
 
   test("should cancel category deletion", async ({ page }) => {
     // Navigate to categories page
-    await navigationPage.gotoCategories();
-
+    await categoriesPage.goto();
+    await categoriesPage.page.waitForLoadState("networkidle");
     // Switch to expense tab
     await categoriesPage.switchToExpenseTab();
 

@@ -244,15 +244,11 @@ test.describe("Complete Account CRUD Workflow", () => {
 
     // Navigate to accounts page
     await page.goto("/accounts");
-
+    await page.waitForLoadState("networkidle");
     // Check if we can access the accounts functionality
     const formExists = await accountForm.formContainer.isVisible().catch(() => false);
 
-    if (!formExists) {
-      console.log("Account form not accessible - likely requires authentication");
-      test.skip();
-      return;
-    }
+    await expect(formExists).toBe(true);
 
     // ===== CREATE ACCOUNT =====
     const accountName = `CRUD Test Account ${Date.now()}`;
@@ -266,7 +262,7 @@ test.describe("Complete Account CRUD Workflow", () => {
 
     // Wait for the account to appear in the list
     await accountsPage.waitForAccountsToLoad();
-    await expect(accountsPage.isAccountVisible(accountName)).toBe(true);
+    expect(await accountsPage.isAccountVisible(accountName)).toBe(true);
 
     // ===== VERIFY ACCOUNT IN LIST =====
     // Get initial account count
@@ -311,10 +307,10 @@ test.describe("Complete Account CRUD Workflow", () => {
     await accountsPage.waitForAccountsToLoad();
 
     // Verify the modified account appears in the list
-    await expect(accountsPage.isAccountVisible(modifiedName)).toBe(true);
+    expect(await accountsPage.isAccountVisible(modifiedName)).toBe(true);
 
     // Verify the old account name is no longer in the list
-    await expect(accountsPage.isAccountVisible(accountName)).toBe(false);
+    expect(await accountsPage.isAccountVisible(accountName)).toBe(false);
 
     // ===== DELETE ACCOUNT =====
     // Click delete button for the modified account
@@ -343,11 +339,7 @@ test.describe("Complete Account CRUD Workflow", () => {
     await accountsPage.waitForAccountsToLoad();
 
     // Verify the account is no longer in the list
-    await expect(accountsPage.isAccountVisible(modifiedName)).toBe(false);
-
-    // Verify account count decreased (if we had the exact count before)
-    const finalCount = await accountsPage.getAccountCount();
-    // Note: Count might not decrease if there were other accounts, but the specific account should be gone
+    expect(await accountsPage.isAccountVisible(modifiedName)).toBe(false);
 
     console.log(`CRUD test completed successfully for account: ${modifiedName}`);
   });
