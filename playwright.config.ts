@@ -27,7 +27,10 @@ export default defineConfig({
         storageState: "playwright/.auth/user.json",
       },
       dependencies: ["setup"],
+      teardown: "cleanup",
     },
+    // Cleanup project
+    { name: "cleanup", testMatch: /db\.teardown\.ts/ },
   ],
   webServer: {
     command: "npm run dev:e2e",
