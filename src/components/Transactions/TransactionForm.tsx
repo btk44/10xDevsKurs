@@ -216,7 +216,7 @@ export default function TransactionForm({
       </h2>
 
       <form onSubmit={handleSubmit} data-testid="transaction-form-element">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           {/* Date Field */}
           <div>
             <label htmlFor="transaction_date" className="block text-sm font-medium mb-1">
@@ -321,7 +321,7 @@ export default function TransactionForm({
           </div>
 
           {/* Comment Field */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 lg:col-span-4">
             <label htmlFor="comment" className="block text-sm font-medium mb-1">
               Comment
             </label>

@@ -11,6 +11,7 @@ import TransactionTable from "./TransactionTable";
 import TransactionForm from "./TransactionForm";
 import AccountTable from "./AccountTable";
 import FilterModal from "./FilterModal";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import { Button } from "../ui/button";
 
 /**
@@ -31,6 +32,10 @@ export default function TransactionsPage() {
 
   // State for filter modal visibility
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // State for delete confirmation modal
+  const [transactionToDelete, setTransactionToDelete] = useState<TransactionDTO | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Fetch transactions based on current filters
   const {
@@ -104,15 +109,31 @@ export default function TransactionsPage() {
     setSelectedTransaction(null);
   };
 
-  // Handle transaction deletion
-  const handleDeleteTransaction = async (id: number) => {
-    const success = await deleteTransaction(id);
+  // Handle delete button click - show confirmation modal
+  const handleDeleteClick = (transaction: TransactionDTO) => {
+    setTransactionToDelete(transaction);
+    setShowDeleteModal(true);
+  };
+
+  // Handle confirmed transaction deletion
+  const handleConfirmDelete = async () => {
+    if (!transactionToDelete) return;
+
+    const success = await deleteTransaction(transactionToDelete.id);
     if (success) {
       // Refresh transactions and accounts data
       await Promise.all([refreshTransactions(), refreshAccounts()]);
-      // Reset form
+      // Reset form and close modal
       setSelectedTransaction(null);
+      setTransactionToDelete(null);
+      setShowDeleteModal(false);
     }
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setTransactionToDelete(null);
+    setShowDeleteModal(false);
   };
 
   // Handle filter apply
@@ -161,33 +182,36 @@ export default function TransactionsPage() {
             <p className="text-gray-500">Loading data...</p>
           </div>
         </div>
-      ) : transactions.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 text-center" data-testid="transactions-empty-state">
-          <h3 className="text-lg font-medium mb-2">No transactions found</h3>
-          <p className="text-gray-500 mb-4">
-            {filters.date_from || filters.date_to || filters.account_id || filters.category_id || filters.search
-              ? "Try adjusting your filters or add a new transaction."
-              : "Start by adding your first transaction."}
-          </p>
-          <Button
-            onClick={() => setFilters({ page: 1, limit: 10, sort: "transaction_date:desc" as SortOption })}
-            data-testid="clear-filters-button"
-          >
-            Clear Filters
-          </Button>
-        </div>
       ) : (
-        <div className="lg:grid lg:grid-cols-5 lg:gap-4" data-testid="transactions-content">
-          {/* Left Column (3/5) */}
-          <div className="mb-4 lg:mb-0 lg:col-span-3" data-testid="transactions-left-column">
-            <TransactionTable
-              transactions={transactions}
-              pagination={pagination}
-              sort={filters.sort as SortOption}
-              onPageChange={handlePageChange}
-              onSortChange={handleSortChange}
-              onRowDoubleClick={handleRowDoubleClick}
-            />
+        <div className="lg:grid lg:grid-cols-8 lg:gap-4" data-testid="transactions-content">
+          {/* Left Column (6/8) */}
+          <div className="mb-4 lg:mb-0 lg:col-span-6" data-testid="transactions-left-column">
+            {transactions.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-6 text-center" data-testid="transactions-empty-state">
+                <h3 className="text-lg font-medium mb-2">No transactions found</h3>
+                <p className="text-gray-500 mb-4">
+                  {filters.date_from || filters.date_to || filters.account_id || filters.category_id || filters.search
+                    ? "Try adjusting your filters or add a new transaction."
+                    : "Start by adding your first transaction."}
+                </p>
+                <Button
+                  onClick={() => setFilters({ page: 1, limit: 10, sort: "transaction_date:desc" as SortOption })}
+                  data-testid="clear-filters-button"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            ) : (
+              <TransactionTable
+                transactions={transactions}
+                pagination={pagination}
+                sort={filters.sort as SortOption}
+                onPageChange={handlePageChange}
+                onSortChange={handleSortChange}
+                onEdit={handleRowDoubleClick}
+                onDeleteClick={handleDeleteClick}
+              />
+            )}
 
             <div className="mt-6" data-testid="transactions-form-container">
               <TransactionForm
@@ -196,13 +220,20 @@ export default function TransactionsPage() {
                 initialData={selectedTransaction}
                 onSubmit={handleFormSubmit}
                 onCancel={handleFormCancel}
-                onDelete={selectedTransaction ? handleDeleteTransaction : undefined}
+                onDelete={
+                  selectedTransaction
+                    ? () => {
+                        setTransactionToDelete(selectedTransaction);
+                        setShowDeleteModal(true);
+                      }
+                    : undefined
+                }
               />
             </div>
           </div>
 
-          {/* Right Column (2/5) */}
-          <div className="lg:col-span-2" data-testid="transactions-right-column">
+          {/* Right Column (2/8) */}
+          <div className="hidden lg:block lg:col-span-2" data-testid="transactions-right-column">
             <AccountTable accounts={accounts} />
           </div>
         </div>
@@ -218,6 +249,15 @@ export default function TransactionsPage() {
           onCancel={handleFilterCancel}
         />
       )}
+
+      <DeleteConfirmationModal
+        transaction={transactionToDelete}
+        open={showDeleteModal}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        isDeleting={mutationLoading}
+        deleteError={mutationError ? (mutationError as Error).message : undefined}
+      />
     </div>
   );
 }

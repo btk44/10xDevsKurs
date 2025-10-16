@@ -148,21 +148,28 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-8" data-testid="accounts-page-container">
-      {isLoading ? (
-        <div className="text-center py-8" data-testid="accounts-loading">
-          Loading accounts...
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          {isLoading ? (
+            <div className="text-center py-8" data-testid="accounts-loading">
+              Loading accounts...
+            </div>
+          ) : (
+            <AccountList accounts={accounts} onEdit={handleEdit} onDelete={handleDelete} />
+          )}
         </div>
-      ) : (
-        <AccountList accounts={accounts} onEdit={handleEdit} onDelete={handleDelete} />
-      )}
-      <AccountForm
-        account={selectedAccount}
-        currencies={currencies}
-        onSave={handleSave}
-        onCancel={handleCancelForm}
-        errors={formErrors}
-        isSaving={isSaving}
-      />
+
+        <div className="lg:col-span-1">
+          <AccountForm
+            account={selectedAccount}
+            currencies={currencies}
+            onSave={handleSave}
+            onCancel={handleCancelForm}
+            errors={formErrors}
+            isSaving={isSaving}
+          />
+        </div>
+      </div>
 
       {accountToDelete && (
         <DeleteConfirmationModal
