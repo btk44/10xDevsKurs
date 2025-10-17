@@ -50,7 +50,8 @@ test.describe("Accounts Management", () => {
     // Verify the account currency is displayed
     const accountId = await accountsPage.getAccountIdByName(accountName);
     expect(accountId).toBeTruthy();
-    const currencyInList = await accountsPage.getAccountCurrency(parseInt(accountId!));
+    if (!accountId) throw new Error(`Account ${accountName} not found`);
+    const currencyInList = await accountsPage.getAccountCurrency(parseInt(accountId));
     expect(currencyInList).toBe("USD");
   });
 
@@ -99,9 +100,10 @@ test.describe("Accounts Management", () => {
     // Get the account ID for deletion
     const accountId = await accountsPage.getAccountIdByName(accountName);
     expect(accountId).toBeTruthy();
+    if (!accountId) throw new Error(`Account ${accountName} not found`);
 
     // Click delete button for the account
-    await accountsPage.clickDeleteAccount(parseInt(accountId!));
+    await accountsPage.clickDeleteAccount(parseInt(accountId));
     await page.waitForTimeout(4000);
     // Verify the delete confirmation modal appears
     await expect(deleteModal.isModalVisible()).resolves.toBe(true);
@@ -155,7 +157,8 @@ test.describe("Accounts Management", () => {
 
     // Get the account ID and click delete
     const accountId = await accountsPage.getAccountIdByName(accountName);
-    await accountsPage.clickDeleteAccount(parseInt(accountId!));
+    if (!accountId) throw new Error(`Account ${accountName} not found`);
+    await accountsPage.clickDeleteAccount(parseInt(accountId));
 
     // Verify modal appears
     await expect(deleteModal.isModalVisible()).resolves.toBe(true);

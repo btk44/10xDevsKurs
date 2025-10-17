@@ -25,7 +25,7 @@ export default function DeleteConfirmationModal({
         <DialogHeader>
           <DialogTitle data-testid="delete-modal-title">Delete Account</DialogTitle>
           <DialogDescription data-testid="delete-modal-description">
-            Are you sure you want to delete the account "{account.name}"?
+            Are you sure you want to delete the account &quot;{account.name}&quot;?
           </DialogDescription>
         </DialogHeader>
 

@@ -45,6 +45,7 @@ vi.mock("../src/db/supabase.client", () => {
 // Mock utils
 vi.mock("@/lib/utils", () => {
   return {
-    cn: (...inputs: any[]) => inputs.filter(Boolean).join(" "),
+    cn: (...inputs: (string | undefined | null | false | Record<string, boolean>)[]) =>
+      inputs.filter(Boolean).join(" "),
   };
 });

@@ -119,9 +119,10 @@ test.describe("Categories Management", () => {
     // Get the category ID for deletion
     const categoryId = await categoryList.getCategoryIdByName(categoryName);
     expect(categoryId).toBeTruthy();
+    if (!categoryId) throw new Error(`Category ${categoryName} not found`);
 
     // Click delete button for the category
-    await categoryList.clickDeleteCategory(parseInt(categoryId!));
+    await categoryList.clickDeleteCategory(parseInt(categoryId));
 
     // Verify the delete confirmation modal appears
     await expect(deleteModal.isModalVisible()).resolves.toBe(true);
@@ -174,7 +175,8 @@ test.describe("Categories Management", () => {
 
     // Get the category ID and click delete
     const categoryId = await categoryList.getCategoryIdByName(categoryName);
-    await categoryList.clickDeleteCategory(parseInt(categoryId!));
+    if (!categoryId) throw new Error(`Category ${categoryName} not found`);
+    await categoryList.clickDeleteCategory(parseInt(categoryId));
 
     // Verify modal appears
     await expect(deleteModal.isModalVisible()).resolves.toBe(true);
