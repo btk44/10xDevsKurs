@@ -1,5 +1,4 @@
 import { vi } from "vitest";
-import type { PostgrestQueryBuilder } from "@supabase/postgrest-js";
 
 interface MockQueryBuilder {
   select: vi.MockedFunction<any>;

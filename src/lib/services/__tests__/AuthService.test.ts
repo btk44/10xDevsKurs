@@ -137,7 +137,7 @@ describe("AuthService", () => {
     });
 
     it("should map unknown errors to generic message and log them", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       const result = authService.handleAuthError({ message: "Some unknown error" });
 
@@ -159,7 +159,7 @@ describe("AuthService", () => {
     });
 
     it("should handle non-Error objects gracefully", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       // @ts-expect-error Testing invalid input
       const result = authService.handleAuthError("string error");

@@ -5,6 +5,7 @@ import type {
   UpdateCategoryCommand,
   ApiResponse,
   ApiErrorResponse,
+  ValidationErrorDetail,
 } from "../../../types";
 
 interface MutationState {
@@ -61,7 +62,7 @@ export const useCategoryMutations = (): CategoryMutations => {
     const fieldErrors: Record<string, string> = {};
 
     if (errorResponse.error?.details && Array.isArray(errorResponse.error.details)) {
-      errorResponse.error.details.forEach((detail: any) => {
+      errorResponse.error.details.forEach((detail: ValidationErrorDetail) => {
         if (detail.field && detail.message) {
           fieldErrors[detail.field] = detail.message;
         }

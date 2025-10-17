@@ -1,5 +1,3 @@
-import { vi } from "vitest";
-import type { APIRoute } from "astro";
 import type { User } from "@supabase/supabase-js";
 import { createMockSupabaseClient } from "./supabase";
 
