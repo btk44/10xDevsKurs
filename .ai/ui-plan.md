@@ -7,6 +7,7 @@ The application uses a responsive, single-page layout with a top navigation bar 
 ## 2. View List
 
 ### 2.1 Login View
+
 - View path: `/login`
 - Main purpose: Authenticate users via email/password.
 - Key information: Email and password inputs, “Forgot Password” link, inline validation errors.
@@ -16,6 +17,7 @@ The application uses a responsive, single-page layout with a top navigation bar 
   - Secure handling of credentials in React Context
 
 ### 2.2 Password Reset View
+
 - View path: `/reset-password`
 - Main purpose: Send password reset email.
 - Key information: Email input, submit button, confirmation feedback.
@@ -25,6 +27,7 @@ The application uses a responsive, single-page layout with a top navigation bar 
   - Prevent reflection attacks by generic success message
 
 ### 2.3 Transactions View
+
 - View path: `/`
 - Main purpose: Add/edit transactions and view transaction history with account balances.
 - Key information:
@@ -43,6 +46,7 @@ The application uses a responsive, single-page layout with a top navigation bar 
   - Keyboard focus in modal, close via Escape or close icon
 
 ### 2.4 Accounts Management View
+
 - View path: `/accounts`
 - Main purpose: CRUD operations on financial accounts.
 - Key information: List of accounts with name, currency, balance, active status.
@@ -56,6 +60,7 @@ The application uses a responsive, single-page layout with a top navigation bar 
   - Inline validation based on API `details`
 
 ### 2.5 Categories Management View
+
 - View path: `/categories`
 - Main purpose: CRUD operations on income and expense categories.
 - Layout for each tab: Single column grid with tow rows: 1. table, 2. form
@@ -85,11 +90,11 @@ The application uses a responsive, single-page layout with a top navigation bar 
 
 - **Top Navigation Bar**: Links to Transactions, Accounts, Categories, Logout.
   - Collapses to hamburger menu below `lg:` breakpoint.
-- **Grid Layout** (on Transactions): 
+- **Grid Layout** (on Transactions):
   - `lg:grid grid-cols-2 gap-4`
   - Left: `<TransactionTable>` above `<TransactionForm>`
   - Right: `<AccountTable>`
-- **Responsive**: 
+- **Responsive**:
   - At `md:` breakpoint and below, hide `<AccountTable>`; at `sm:` collapse to single column.
   - Tables stack vertically.
 

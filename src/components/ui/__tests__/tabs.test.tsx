@@ -124,7 +124,9 @@ describe("Tabs", () => {
       render(
         <Tabs>
           <TabsList>
-            <TabsTrigger value="tab1" className="custom-trigger">Tab 1</TabsTrigger>
+            <TabsTrigger value="tab1" className="custom-trigger">
+              Tab 1
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       );
@@ -189,7 +191,9 @@ describe("Tabs", () => {
     it("applies additional className", () => {
       render(
         <Tabs defaultValue="tab1">
-          <TabsContent value="tab1" className="custom-content">Content 1</TabsContent>
+          <TabsContent value="tab1" className="custom-content">
+            Content 1
+          </TabsContent>
         </Tabs>
       );
 
@@ -293,7 +297,7 @@ describe("Tabs", () => {
       expect(tabpanel).toBeInTheDocument();
 
       // Check that active tab has correct state
-      const activeTab = tabs.find(tab => tab.getAttribute("data-state") === "active");
+      const activeTab = tabs.find((tab) => tab.getAttribute("data-state") === "active");
       expect(activeTab).toBeInTheDocument();
       expect(activeTab).toHaveAttribute("aria-selected", "true");
     });

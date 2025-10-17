@@ -5,9 +5,11 @@ This directory contains Page Object Model classes following the Playwright E2E t
 ## Available POM Classes
 
 ### LoginPage
+
 Handles login functionality including form interactions, validation, and navigation.
 
 **Key Methods:**
+
 - `login(email, password)` - Complete login flow
 - `loginWithInvalidCredentials(email, password)` - Login with invalid credentials for testing error states
 - `clickForgotPassword()` / `clickRegister()` - Navigation links
@@ -15,18 +17,22 @@ Handles login functionality including form interactions, validation, and navigat
 - `getGeneralErrorText()`, `getEmailErrorText()`, etc. - Error message retrieval
 
 ### NavigationPage
+
 Handles main navigation elements and user actions.
 
 **Key Methods:**
+
 - `gotoTransactions()` / `gotoAccounts()` / `gotoCategories()` - Navigate to different sections
 - `logout()` - User logout
 - `isAccountsLinkVisible()`, etc. - Navigation element visibility
 - `getUserEmail()` - Get logged-in user email
 
 ### AccountsPage
+
 Handles the accounts page and account list interactions.
 
 **Key Methods:**
+
 - `goto()` - Navigate to accounts page
 - `isAccountVisible(accountName)` - Check if account exists in list
 - `getAccountCount()` / `getAccountNames()` - Account list information
@@ -35,9 +41,11 @@ Handles the accounts page and account list interactions.
 - `waitForAccountsToLoad()` - Wait for async data loading
 
 ### AccountForm
+
 Handles account creation and editing form interactions.
 
 **Key Methods:**
+
 - `createAccount(name, currencyCode, tag?)` - Complete account creation
 - `editAccount(name, currencyCode, tag?)` - Complete account editing
 - `fillAccountName(name)` / `selectCurrency(code)` / `fillTag(tag)` - Individual field interactions
@@ -48,6 +56,7 @@ Handles account creation and editing form interactions.
 ## Usage Examples
 
 ### Complete Account Creation Workflow
+
 ```typescript
 import { test, expect } from "@playwright/test";
 import { testUsers } from "../fixtures/test-users";
@@ -78,6 +87,7 @@ test("create new account", async ({ page }) => {
 ```
 
 ### Form Validation Testing
+
 ```typescript
 test("validate account form", async ({ page }) => {
   // Setup...
@@ -93,6 +103,7 @@ test("validate account form", async ({ page }) => {
 ```
 
 ## Test Data
+
 Test user credentials are available in `fixtures/test-users.ts`:
 
 ```typescript
@@ -125,6 +136,7 @@ npx playwright test --ui
 ```
 
 ## Test Structure
+
 ```
 e2e/
 ├── pages/              # POM classes

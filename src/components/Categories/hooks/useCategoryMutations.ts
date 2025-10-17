@@ -47,7 +47,7 @@ export const useCategoryMutations = (): CategoryMutations => {
   const handleApiError = async (response: Response): Promise<ApiErrorResponse> => {
     try {
       return (await response.json()) as ApiErrorResponse;
-    } catch (error) {
+    } catch {
       return {
         error: {
           code: "UNKNOWN_ERROR",

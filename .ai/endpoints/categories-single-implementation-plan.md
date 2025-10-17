@@ -5,7 +5,8 @@
 This endpoint retrieves a single category by its unique identifier. It provides detailed information about a specific expense or income category belonging to the authenticated user. The endpoint enforces user data isolation through Row Level Security (RLS) policies, ensuring users can only access their own categories.
 
 **Purpose**: Fetch detailed information for a specific category
-**Use Cases**: 
+**Use Cases**:
+
 - Category detail views in the UI
 - Form pre-population for category editing
 - Category validation in transaction creation
@@ -17,13 +18,15 @@ This endpoint retrieves a single category by its unique identifier. It provides 
 - **Authentication**: Required (JWT token in Authorization header)
 
 **Parameters**:
-- **Required**: 
+
+- **Required**:
   - `id` (path parameter, integer): The unique identifier of the category to retrieve
 - **Optional**: None
 
 **Request Body**: None (GET request)
 
 **Example Request**:
+
 ```
 GET /api/categories/123
 Authorization: Bearer <jwt-token>
@@ -32,18 +35,21 @@ Authorization: Bearer <jwt-token>
 ## 3. Used Types
 
 **Response Types**:
+
 - `CategoryDTO` - Main data transfer object for category information
 - `ApiResponse<CategoryDTO>` - Wrapper for successful response
 - `ApiErrorResponse` - Wrapper for error responses
 - `ErrorDTO` - Error details structure
 
 **Internal Types**:
+
 - Supabase user context for authentication
 - Database row type from `Tables<"categories">`
 
 ## 4. Response Details
 
 **Success Response** (200 OK):
+
 ```json
 {
   "data": {
@@ -61,6 +67,7 @@ Authorization: Bearer <jwt-token>
 ```
 
 **Error Responses**:
+
 - `400 Bad Request`: Invalid ID parameter format
 - `401 Unauthorized`: Missing or invalid authentication token
 - `404 Not Found`: Category not found or doesn't belong to user
@@ -90,19 +97,23 @@ Authorization: Bearer <jwt-token>
 ## 6. Security Considerations
 
 **Authentication**:
+
 - JWT token validation through Astro middleware
 - User context extraction from auth.uid()
 
 **Authorization**:
+
 - Row Level Security (RLS) ensures user can only access own categories
 - No additional authorization checks needed at application level
 
 **Input Validation**:
+
 - Validate ID parameter is positive integer
 - Sanitize any potential injection attempts
 - Rate limiting consideration for API abuse prevention
 
 **Data Protection**:
+
 - RLS policies prevent data leakage between users
 - No sensitive data exposure in error messages
 - Audit logging for security monitoring
@@ -110,6 +121,7 @@ Authorization: Bearer <jwt-token>
 ## 7. Error Handling
 
 **Client Errors (4xx)**:
+
 - `400 Bad Request`:
   - Invalid ID format (non-numeric, negative, zero)
   - ID exceeds reasonable limits
@@ -126,12 +138,14 @@ Authorization: Bearer <jwt-token>
   - Category is soft-deleted (active = false)
 
 **Server Errors (5xx)**:
+
 - `500 Internal Server Error`:
   - Database connection failures
   - Supabase service unavailable
   - Unexpected application errors
 
 **Error Response Format**:
+
 ```json
 {
   "error": {
@@ -145,16 +159,19 @@ Authorization: Bearer <jwt-token>
 ## 8. Performance Considerations
 
 **Database Optimization**:
+
 - Single row query with primary key lookup (very fast)
 - RLS index on (user_id, id) for efficient filtering
 - No complex joins or aggregations needed
 
 **Caching Strategy**:
+
 - Categories change infrequently, good candidates for caching
 - Consider ETag headers for conditional requests
 - Application-level caching for frequently accessed categories
 
 **Response Size**:
+
 - Minimal payload size with only necessary fields
 - No eager loading of related data unless specifically needed
 
@@ -197,6 +214,7 @@ Authorization: Bearer <jwt-token>
    - Error scenario coverage
 
 **File Structure**:
+
 ```
 src/pages/api/categories/[id].ts    # Main API route handler
 src/lib/services/CategoryService.ts # Business logic layer
@@ -204,6 +222,7 @@ src/types.ts                        # Type definitions (existing)
 ```
 
 **Dependencies**:
+
 - Supabase client for database operations
 - CategoryService for business logic
 - Authentication middleware

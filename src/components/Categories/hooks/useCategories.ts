@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { CategoryDTO, CategoryType, ApiCollectionResponse } from "../../../types";
 import type { CategoryViewModel } from "../CategoriesPage";
 
@@ -7,7 +7,7 @@ export const useCategories = (type: CategoryType) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -26,7 +26,7 @@ export const useCategories = (type: CategoryType) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [type]);
 
   // Build hierarchical view models from flat DTO array
   const buildCategoryViewModels = (categoryDTOs: CategoryDTO[]): CategoryViewModel[] => {
@@ -94,7 +94,7 @@ export const useCategories = (type: CategoryType) => {
   // Fetch categories when type changes
   useEffect(() => {
     fetchCategories();
-  }, [type]);
+  }, [fetchCategories]);
 
   return {
     categories,

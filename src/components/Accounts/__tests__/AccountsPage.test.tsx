@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "../../../../tests/utils";
 import userEvent from "@testing-library/user-event";
 import AccountsPage from "../AccountsPage";
-import type { AccountDTO, CurrencyDTO, CreateAccountCommand, UpdateAccountCommand } from "../../../types";
+import type { AccountDTO, CurrencyDTO } from "../../../types";
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -87,7 +87,7 @@ describe("AccountsPage", () => {
     });
 
     it("handles fetch errors gracefully", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
       render(<AccountsPage />);
@@ -391,7 +391,7 @@ describe("AccountsPage", () => {
     });
 
     it("handles delete errors gracefully", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       mockFetch.mockRejectedValueOnce(new Error("Delete failed"));
 
       render(<AccountsPage />);
@@ -521,7 +521,7 @@ describe("AccountsPage", () => {
     });
 
     it("handles network errors during save operations", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
       render(<AccountsPage />);
@@ -548,7 +548,7 @@ describe("AccountsPage", () => {
     });
 
     it("handles non-200 responses during save operations", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,

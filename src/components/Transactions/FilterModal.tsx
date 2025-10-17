@@ -86,7 +86,7 @@ export default function FilterModal({
   };
 
   // Validate a single field
-  const validateField = (name: string, value: any): string | undefined => {
+  const validateField = (name: string, value: string | undefined): string | undefined => {
     // Date range validation
     if (name === "date_from" && filters.date_to && value) {
       if (new Date(value) > new Date(filters.date_to)) {

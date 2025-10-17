@@ -32,14 +32,14 @@ Follow these guidelines for unit tests:
 Example:
 
 ```tsx
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '../../../tests/utils';
-import { MyComponent } from '../MyComponent';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "../../../tests/utils";
+import { MyComponent } from "../MyComponent";
 
-describe('MyComponent', () => {
-  it('renders correctly', () => {
+describe("MyComponent", () => {
+  it("renders correctly", () => {
     render(<MyComponent />);
-    expect(screen.getByText('Hello')).toBeInTheDocument();
+    expect(screen.getByText("Hello")).toBeInTheDocument();
   });
 });
 ```
@@ -72,15 +72,15 @@ Follow these guidelines for E2E tests:
 Example:
 
 ```ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Home Page', () => {
+test.describe("Home Page", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto("/");
   });
 
-  test('should display welcome message', async ({ page }) => {
-    await expect(page.getByRole('heading')).toContainText('Welcome');
+  test("should display welcome message", async ({ page }) => {
+    await expect(page.getByRole("heading")).toContainText("Welcome");
   });
 });
 ```

@@ -5,6 +5,7 @@
 The GET /api/transactions endpoint retrieves a paginated list of the authenticated user's financial transactions with comprehensive filtering, sorting, and search capabilities. The endpoint returns transactions with joined data from related entities (accounts, categories, currencies) to provide complete transaction information in a single request.
 
 **Key Features:**
+
 - User-specific transaction retrieval with RLS enforcement
 - Date range filtering for specific periods
 - Entity-based filtering (account, category)
@@ -24,6 +25,7 @@ The GET /api/transactions endpoint retrieves a paginated list of the authenticat
 All parameters are optional:
 
 **Filtering Parameters:**
+
 - `date_from` (string): Start date filter in ISO 8601 format (e.g., "2025-10-01")
 - `date_to` (string): End date filter in ISO 8601 format (e.g., "2025-10-31")
 - `account_id` (integer): Filter transactions by specific account
@@ -32,10 +34,12 @@ All parameters are optional:
 - `include_inactive` (boolean): Include soft-deleted records (default: false)
 
 **Sorting Parameters:**
+
 - `sort` (string): Sort field and direction (default: "transaction_date:desc")
   - Valid options: "transaction_date:asc", "transaction_date:desc", "amount:asc", "amount:desc"
 
 **Pagination Parameters:**
+
 - `page` (integer): Page number starting from 1 (default: 1)
 - `limit` (integer): Items per page (default: 50, maximum: 100)
 
@@ -44,10 +48,12 @@ All parameters are optional:
 ## 3. Used Types
 
 **Input Types:**
+
 - `GetTransactionsQuery` - Query parameter validation and parsing
 - Request validation schemas from `src/lib/validation/schemas.ts`
 
 **Output Types:**
+
 - `TransactionDTO` - Individual transaction with joined data
 - `ApiCollectionResponse<TransactionDTO>` - Response wrapper with pagination
 - `PaginationDTO` - Pagination metadata
@@ -69,7 +75,7 @@ All parameters are optional:
       "category_id": 2,
       "category_name": "Food",
       "category_type": "expense",
-      "amount": 45.50,
+      "amount": 45.5,
       "currency_id": 1,
       "currency_code": "PLN",
       "comment": "Lunch at restaurant",
@@ -90,6 +96,7 @@ All parameters are optional:
 ### Error Responses
 
 **400 Bad Request** - Invalid query parameters:
+
 ```json
 {
   "error": {
@@ -106,6 +113,7 @@ All parameters are optional:
 ```
 
 **401 Unauthorized** - Missing or invalid authentication:
+
 ```json
 {
   "error": {
@@ -145,11 +153,13 @@ All parameters are optional:
 ## 6. Security Considerations
 
 **Authentication & Authorization:**
+
 - JWT token validation through Supabase Auth middleware
 - User identity extraction from `auth.uid()`
 - RLS policies automatically enforce user data isolation
 
 **Input Validation:**
+
 - Strict parameter validation using Zod schemas
 - Date format validation (ISO 8601)
 - Numeric parameter bounds checking
@@ -157,6 +167,7 @@ All parameters are optional:
 - Search parameter sanitization to prevent SQL injection
 
 **Data Protection:**
+
 - RLS ensures users can only access their own transactions
 - No direct user_id parameter manipulation possible
 - Soft-deleted records only included when explicitly requested
@@ -185,6 +196,7 @@ All parameters are optional:
   - Unexpected service exceptions
 
 **Error Logging:**
+
 - Log all 500 errors with full context for debugging
 - Log authentication failures for security monitoring
 - Include request parameters and user context in error logs
@@ -192,6 +204,7 @@ All parameters are optional:
 ## 8. Performance Considerations
 
 **Database Optimization:**
+
 - Leverage existing indexes:
   - `idx_transactions_user_date` for user + date filtering
   - `idx_transactions_user_active` for user + active filtering
@@ -199,17 +212,20 @@ All parameters are optional:
   - `idx_transactions_category` for category filtering
 
 **Query Optimization:**
+
 - Use LIMIT/OFFSET for pagination
 - Apply filters before joins when possible
 - Utilize partial indexes for active records
 - Consider query plan optimization for complex filter combinations
 
 **Caching Considerations:**
+
 - Consider implementing application-level caching for frequently accessed pages
 - Cache pagination metadata for large datasets
 - Implement cache invalidation on transaction modifications
 
 **Response Size Management:**
+
 - Default pagination limit of 50 items
 - Maximum limit enforcement (100 items)
 - Efficient JSON serialization
