@@ -100,4 +100,24 @@ export class AccountsPage {
     await this.page.waitForTimeout(1000); // Wait for accounts to load
     // Alternative: await this.page.waitForFunction(() => !document.querySelector('[data-testid="accounts-loading"]'));
   }
+
+  async getAccountIdByName(accountName: string): Promise<string | null> {
+    const accountRows = this.page.locator('[data-testid^="account-row-"]');
+    const count = await accountRows.count();
+
+    for (let i = 0; i < count; i++) {
+      const row = accountRows.nth(i);
+      const nameElement = row.locator('[data-testid^="account-name-"]');
+      const name = await nameElement.textContent();
+
+      if (name === accountName) {
+        const testId = await row.getAttribute("data-testid");
+        if (testId) {
+          return testId.replace("account-row-", "");
+        }
+      }
+    }
+
+    return null;
+  }
 }

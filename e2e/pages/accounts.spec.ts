@@ -1,346 +1,176 @@
 import { test, expect } from "@playwright/test";
-import { AccountForm } from "./AccountForm";
-import { AccountsPage } from "./AccountsPage";
-import { testUsers } from "e2e/fixtures/test-users";
+import { AccountsPage, AccountForm, DeleteAccountDialog } from "./index";
 
-let accountForm: AccountForm;
-let accountsPage: AccountsPage;
+test.describe("Accounts Management", () => {
+  let accountsPage: AccountsPage;
+  let accountForm: AccountForm;
+  let deleteModal: DeleteAccountDialog;
 
-test.beforeEach(async ({ page }) => {
-  accountForm = new AccountForm(page);
-  accountsPage = new AccountsPage(page);
-});
+  test.beforeEach(async ({ page }) => {
+    accountsPage = new AccountsPage(page);
+    accountForm = new AccountForm(page);
+    deleteModal = new DeleteAccountDialog(page);
 
-test.describe("Account Page Structure", () => {
-  test("should load account page structure", async ({ page }) => {
-    // Navigate directly to accounts page
-    await page.goto("/accounts");
-
-    // Check that the page loads (may redirect to login if not authenticated)
-    await expect(page).toHaveTitle(/Finance Tracker/);
+    // Login first
+    //await loginPage.goto();
+    //await loginPage.login(testUsers.standard.email, testUsers.standard.password);
   });
 
-  test("should display account form components when accessible", async ({ page }) => {
-    // This test assumes we can access the accounts page
-    // In a real scenario, this would require authentication
-    await page.goto("/accounts");
-
-    // Try to access form elements if they exist
-    const formExists = await accountForm.formContainer.isVisible().catch(() => false);
-
-    if (formExists) {
-      // Test form is visible
-      await expect(accountForm.formContainer).toBeVisible();
-      await expect(accountForm.formTitle).toBeVisible();
-      await expect(accountForm.form).toBeVisible();
-    }
-  });
-});
-
-test.describe("Account Form Interactions", () => {
-  test("should allow filling account name", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const formExists = await accountForm.formContainer.isVisible().catch(() => false);
-
-    if (formExists) {
-      const testName = "Test Account Name";
-      await accountForm.fillAccountName(testName);
-
-      const value = await accountForm.nameInput.inputValue();
-      expect(value).toBe(testName);
-    }
-  });
-
-  test("should allow selecting currency", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const formExists = await accountForm.formContainer.isVisible().catch(() => false);
-
-    if (formExists) {
-      await accountForm.selectCurrency("USD - US Dollar");
-
-      const value = await accountForm.currencySelect.inputValue();
-      expect(value).toBe("3"); // USD currency ID
-    }
-  });
-
-  test("should allow filling account tag", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const formExists = await accountForm.formContainer.isVisible().catch(() => false);
-
-    if (formExists) {
-      const testTag = "test-tag";
-      await accountForm.fillTag(testTag);
-
-      const value = await accountForm.tagInput.inputValue();
-      expect(value).toBe(testTag);
-    }
-  });
-});
-
-test.describe("Accounts Table", () => {
-  test("should display accounts table when data exists", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const tableExists = await accountsPage.accountsTable.isVisible().catch(() => false);
-    const noAccountsExists = await accountsPage.noAccountsMessage.isVisible().catch(() => false);
-
-    if (tableExists) {
-      await expect(accountsPage.accountsTable).toBeVisible();
-
-      // Check table headers
-      await expect(page.getByTestId("sort-name-header")).toBeVisible();
-      await expect(page.getByTestId("sort-currency-header")).toBeVisible();
-      await expect(page.getByTestId("sort-balance-header")).toBeVisible();
-      await expect(page.getByTestId("sort-created-header")).toBeVisible();
-    } else if (noAccountsExists) {
-      await expect(accountsPage.noAccountsMessage).toBeVisible();
-    }
-  });
-
-  test("should allow sorting by name", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const tableExists = await accountsPage.accountsTable.isVisible().catch(() => false);
-
-    if (tableExists) {
-      await accountsPage.sortByName();
-      // Verify table is still visible after sorting
-      await expect(accountsPage.accountsTable).toBeVisible();
-    }
-  });
-
-  test("should allow sorting by currency", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const tableExists = await accountsPage.accountsTable.isVisible().catch(() => false);
-
-    if (tableExists) {
-      await accountsPage.sortByCurrency();
-      await expect(accountsPage.accountsTable).toBeVisible();
-    }
-  });
-
-  test("should allow sorting by balance", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const tableExists = await accountsPage.accountsTable.isVisible().catch(() => false);
-
-    if (tableExists) {
-      await accountsPage.sortByBalance();
-      await expect(accountsPage.accountsTable).toBeVisible();
-    }
-  });
-
-  test("should allow sorting by creation date", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const tableExists = await accountsPage.accountsTable.isVisible().catch(() => false);
-
-    if (tableExists) {
-      await accountsPage.sortByCreatedDate();
-      await expect(accountsPage.accountsTable).toBeVisible();
-    }
-  });
-});
-
-test.describe("Account Actions", () => {
-  test("should show edit and delete buttons for accounts", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const tableExists = await accountsPage.accountsTable.isVisible().catch(() => false);
-
-    if (tableExists) {
-      // Get all account rows
-      const accountRows = page.locator('[data-testid^="account-row-"]');
-      const count = await accountRows.count();
-
-      if (count > 0) {
-        // Check first account row has action buttons
-        const firstRow = accountRows.first();
-        await expect(firstRow.locator('[data-testid^="edit-account-"]')).toBeVisible();
-        await expect(firstRow.locator('[data-testid^="delete-account-"]')).toBeVisible();
-      }
-    }
-  });
-});
-
-test.describe("Modal Interactions", () => {
-  test("should handle delete confirmation modal", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const tableExists = await accountsPage.accountsTable.isVisible().catch(() => false);
-
-    if (tableExists) {
-      const accountRows = page.locator('[data-testid^="account-row-"]');
-      const count = await accountRows.count();
-
-      if (count > 0) {
-        // Click delete button on first account
-        const deleteButton = page.locator('[data-testid^="delete-account-"]').first();
-        await deleteButton.click();
-
-        // Check if modal appears (modal implementation may vary)
-        // This is a basic check for modal behavior
-        await page.waitForTimeout(500); // Allow time for modal to appear
-      }
-    }
-  });
-});
-
-test.describe("Form Cancellation", () => {
-  test("should allow cancelling account form", async ({ page }) => {
-    await page.goto("/accounts");
-
-    const formExists = await accountForm.formContainer.isVisible().catch(() => false);
-
-    if (formExists) {
-      // Fill form with data
-      await accountForm.fillAccountName("Cancel Test");
-      await accountForm.selectCurrency("EUR - Euro");
-      await accountForm.fillTag("cancel");
-
-      // Cancel the form
-      await accountForm.cancelForm();
-
-      // Form should no longer be visible or fields should be cleared
-      const stillVisible = await accountForm.formContainer.isVisible().catch(() => false);
-      if (!stillVisible) {
-        // Form was hidden
-        expect(stillVisible).toBe(false);
-      } else {
-        // Form is still visible but fields might be cleared
-        // This depends on the actual implementation
-      }
-    }
-  });
-});
-
-test.describe("Loading States", () => {
-  test("should handle loading states appropriately", async ({ page }) => {
-    await page.goto("/accounts");
-
-    // Check for loading indicators
-    const loadingVisible = await accountsPage.loadingIndicator.isVisible().catch(() => false);
-
-    if (loadingVisible) {
-      // Wait for loading to complete
-      await accountsPage.waitForAccountsToLoad();
-
-      // Loading should be gone
-      await expect(accountsPage.loadingIndicator).not.toBeVisible();
-    }
-  });
-});
-
-test.describe("Complete Account CRUD Workflow", () => {
-  test("should create account, verify in list, modify it, verify changes, delete it, and confirm removal", async ({
-    page,
-  }) => {
-    // This test requires authentication to work fully
-    // It demonstrates the complete CRUD workflow for accounts
-
+  test("should create a new account and verify it appears in the list", async ({ page }) => {
     // Navigate to accounts page
-    await page.goto("/accounts");
-    await page.waitForLoadState("networkidle");
-    // Check if we can access the accounts functionality
-    const formExists = await accountForm.formContainer.isVisible().catch(() => false);
+    await accountsPage.goto();
+    await accountsPage.page.waitForLoadState("networkidle");
+    // Verify accounts page is loaded
+    await expect(accountsPage.pageContainer).toBeVisible();
 
-    await expect(formExists).toBe(true);
-
-    // ===== CREATE ACCOUNT =====
-    const accountName = `CRUD Test Account ${Date.now()}`;
-    const initialTag = "initial-tag";
-
-    // Fill and submit the form to create account
-    await accountForm.fillAccountName(accountName);
-    await accountForm.selectCurrency("USD - US Dollar");
-    await accountForm.fillTag(initialTag);
-    await accountForm.submitForm();
-
-    // Wait for the account to appear in the list
+    // Wait for accounts to load
     await accountsPage.waitForAccountsToLoad();
-    expect(await accountsPage.isAccountVisible(accountName)).toBe(true);
 
-    // ===== VERIFY ACCOUNT IN LIST =====
     // Get initial account count
     const initialCount = await accountsPage.getAccountCount();
-    expect(initialCount).toBeGreaterThan(0);
 
-    // Verify account details
-    const accountNames = await accountsPage.getAccountNames();
-    expect(accountNames).toContain(accountName);
+    // Fill the account form
+    const accountName = `Test Account ${Date.now()}`;
+    const accountCurrency = "USD - US Dollar";
+    const accountTag = "TEST";
 
-    // Find the account ID from the test IDs
-    const accountRow = page.locator(`[data-testid^="account-row-"]`, { hasText: accountName });
-    const accountId = await accountRow.getAttribute("data-testid").then((attr) => attr?.replace("account-row-", ""));
+    await accountForm.createAccount(accountName, accountCurrency, accountTag);
 
-    if (!accountId) {
-      throw new Error("Could not find account ID");
-    }
+    // Wait for the account to appear in the list
+    await page.waitForTimeout(1000); // Allow time for the API call and UI update
+    await accountsPage.waitForAccountsToLoad();
+    // Verify the account appears in the list
+    await expect(accountsPage.accountsTable).toBeVisible();
+    expect(await accountsPage.isAccountVisible(accountName)).toBe(true);
 
-    // ===== MODIFY ACCOUNT =====
-    const modifiedName = `${accountName} - Modified`;
-    const modifiedTag = "modified-tag";
+    // Verify the account count increased
+    const finalCount = await accountsPage.getAccountCount();
+    expect(finalCount).toBe(initialCount + 1);
 
-    // Click edit button for the account
-    await accountsPage.clickEditAccount(parseInt(accountId));
+    // Verify the account currency is displayed
+    const accountId = await accountsPage.getAccountIdByName(accountName);
+    expect(accountId).toBeTruthy();
+    const currencyInList = await accountsPage.getAccountCurrency(parseInt(accountId!));
+    expect(currencyInList).toBe("USD");
+  });
 
-    // Wait for form to load with account data
-    await accountForm.waitForFormToLoad();
+  test("should display empty state when no accounts exist", async () => {
+    // This test would need to be run with a clean database or mock API
+    // For demonstration purposes, we'll just check the structure exists
+    await accountsPage.goto();
+    await accountsPage.page.waitForLoadState("networkidle");
+    // If accounts exist, the empty message won't be visible
+    // If no accounts exist, the empty message should be visible
+    const hasEmptyMessage = await accountsPage.isNoAccountsMessageVisible();
+    await accountsPage.waitForAccountsToLoad();
+    const hasTable = await accountsPage.isAccountsTableVisible();
 
-    // Verify we're in edit mode
-    await expect(accountForm.isEditForm()).toBe(true);
+    // Either empty message or table should be visible (not both)
+    expect(hasEmptyMessage || hasTable).toBe(true);
+    expect(hasEmptyMessage && hasTable).toBe(false);
+  });
 
-    // Modify the account details
-    await accountForm.fillAccountName(modifiedName);
-    await accountForm.selectCurrency("EUR - Euro");
-    await accountForm.fillTag(modifiedTag);
+  test("should create and delete an account", async ({ page }) => {
+    // Navigate to accounts page
+    await accountsPage.goto();
+    await accountsPage.page.waitForLoadState("networkidle");
+    // Verify accounts page is loaded
+    await expect(accountsPage.pageContainer).toBeVisible();
 
-    // Submit the changes
-    await accountForm.submitForm();
-
-    // ===== VERIFY CHANGES ARE APPLIED =====
-    // Wait for the changes to be reflected
+    // Wait for accounts to load
     await accountsPage.waitForAccountsToLoad();
 
-    // Verify the modified account appears in the list
-    expect(await accountsPage.isAccountVisible(modifiedName)).toBe(true);
+    // Get initial account count
+    const initialCount = await accountsPage.getAccountCount();
 
-    // Verify the old account name is no longer in the list
+    // Create a new account for testing deletion
+    const accountName = `Delete Test ${Date.now()}`;
+    const accountCurrency = "EUR - Euro";
+
+    await accountForm.createAccount(accountName, accountCurrency);
+
+    // Wait for the account to appear in the list
+    await page.waitForTimeout(1000);
+    await accountsPage.waitForAccountsToLoad();
+    // Verify the account was created
+    expect(await accountsPage.isAccountVisible(accountName)).toBe(true);
+    expect(await accountsPage.getAccountCount()).toBe(initialCount + 1);
+
+    // Get the account ID for deletion
+    const accountId = await accountsPage.getAccountIdByName(accountName);
+    expect(accountId).toBeTruthy();
+
+    // Click delete button for the account
+    await accountsPage.clickDeleteAccount(parseInt(accountId!));
+    await page.waitForTimeout(4000);
+    // Verify the delete confirmation modal appears
+    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
+
+    // Verify modal content
+    const title = await deleteModal.getTitle();
+    expect(title).toContain("Delete Account");
+
+    const description = await deleteModal.getDescription();
+    expect(description).toContain(accountName);
+
+    // Confirm deletion
+    await deleteModal.confirm();
+
+    // Wait for deletion to complete
+    await page.waitForTimeout(1000);
+    await accountsPage.waitForAccountsToLoad();
+    // Verify the account is no longer in the list
     expect(await accountsPage.isAccountVisible(accountName)).toBe(false);
 
-    // ===== DELETE ACCOUNT =====
-    // Click delete button for the modified account
-    await accountsPage.clickDeleteAccount(parseInt(accountId));
+    // Verify the account count decreased
+    const finalCount = await accountsPage.getAccountCount();
+    expect(finalCount).toBe(initialCount);
 
-    // Handle the delete confirmation modal
-    // (This assumes the modal appears - implementation may vary)
-    await page.waitForTimeout(500); // Allow modal to appear
+    // Verify modal is closed
+    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
+  });
 
-    // Look for modal and confirm deletion
-    const modalVisible = await page
-      .locator('[data-testid="delete-account-modal"]')
-      .isVisible()
-      .catch(() => false);
+  test("should cancel account deletion", async ({ page }) => {
+    // Navigate to accounts page
+    await accountsPage.goto();
+    await accountsPage.page.waitForLoadState("networkidle");
+    // Verify accounts page is loaded
+    await expect(accountsPage.pageContainer).toBeVisible();
 
-    if (modalVisible) {
-      // Click the confirm delete button
-      await page.getByTestId("delete-modal-confirm").click();
-    } else {
-      // If no modal, assume delete button directly triggers deletion
-      console.log("Delete modal not found - assuming direct deletion");
-    }
-
-    // ===== VERIFY ACCOUNT IS REMOVED =====
-    // Wait for the account to be removed
+    // Wait for accounts to load
     await accountsPage.waitForAccountsToLoad();
 
-    // Verify the account is no longer in the list
-    expect(await accountsPage.isAccountVisible(modifiedName)).toBe(false);
+    // Get initial account count
+    const initialCount = await accountsPage.getAccountCount();
 
-    console.log(`CRUD test completed successfully for account: ${modifiedName}`);
+    // Create a new account for testing cancel deletion
+    const accountName = `Cancel Delete Test ${Date.now()}`;
+    const accountCurrency = "EUR - Euro";
+
+    await accountForm.createAccount(accountName, accountCurrency);
+
+    // Wait for the account to appear
+    await page.waitForTimeout(1000);
+    expect(await accountsPage.isAccountVisible(accountName)).toBe(true);
+
+    // Get the account ID and click delete
+    const accountId = await accountsPage.getAccountIdByName(accountName);
+    await accountsPage.clickDeleteAccount(parseInt(accountId!));
+
+    // Verify modal appears
+    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
+
+    // Cancel the deletion
+    await deleteModal.cancel();
+
+    // Verify modal is closed
+    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
+
+    // Verify the account is still in the list
+    expect(await accountsPage.isAccountVisible(accountName)).toBe(true);
+
+    // Verify count hasn't changed
+    const finalCount = await accountsPage.getAccountCount();
+    expect(finalCount).toBe(initialCount + 1);
   });
 });

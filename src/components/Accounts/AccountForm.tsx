@@ -108,7 +108,13 @@ export default function AccountForm({
       return;
     }
 
-    onSave(formData);
+    // Convert null tag to empty string before saving
+    const dataToSave = {
+      ...formData,
+      tag: formData.tag || "",
+    };
+
+    onSave(dataToSave);
   };
 
   const isFormValid = formData.name.trim() && formData.currency_id > 0;

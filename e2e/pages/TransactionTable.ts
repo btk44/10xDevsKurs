@@ -134,4 +134,45 @@ export class TransactionTable {
     const button = await this.getDeleteButton(transactionId);
     await button.click();
   }
+
+  async getTransactionByDetails(date: string, amount: string, category: string): Promise<Locator> {
+    // Find transaction row that contains all these details
+    return this.page
+      .locator('[data-testid^="transaction-row-"]', {
+        hasText: date,
+      })
+      .filter({
+        hasText: amount,
+      })
+      .filter({
+        hasText: category,
+      });
+  }
+
+  async getTransactionIdByDetails(date: string, amount: string, category: string): Promise<string | null> {
+    const transactionRow = await this.getTransactionByDetails(date, amount, category);
+    const count = await transactionRow.count();
+
+    if (count === 0) {
+      return null;
+    }
+
+    const testId = await transactionRow.first().getAttribute("data-testid");
+    return testId ? testId.replace("transaction-row-", "") : null;
+  }
+
+  async isTransactionVisible(date: string, amount: string, category: string): Promise<boolean> {
+    const transactionRow = await this.getTransactionByDetails(date, amount, category);
+    return await transactionRow.isVisible();
+  }
+
+  async waitForTransactionToAppear(date: string, amount: string, category: string): Promise<void> {
+    const transactionRow = await this.getTransactionByDetails(date, amount, category);
+    await transactionRow.waitFor({ state: "visible" });
+  }
+
+  async waitForTransactionToDisappear(date: string, amount: string, category: string): Promise<void> {
+    const transactionRow = await this.getTransactionByDetails(date, amount, category);
+    await transactionRow.waitFor({ state: "hidden" });
+  }
 }

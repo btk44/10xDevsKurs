@@ -256,7 +256,7 @@ export default function TransactionForm({
               <option value="">Select Account</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.name} ({account.currency_code})
+                  {account.name}
                 </option>
               ))}
             </select>
