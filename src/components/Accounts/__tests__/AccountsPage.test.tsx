@@ -460,12 +460,12 @@ describe("AccountsPage", () => {
 
       // Button should show loading state
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /saving/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /saving\.\.\./i })).toBeInTheDocument();
       });
 
       // Wait for completion
       await waitFor(() => {
-        expect(screen.queryByRole("button", { name: /saving/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /saving\.\.\./i })).not.toBeInTheDocument();
       });
     });
 

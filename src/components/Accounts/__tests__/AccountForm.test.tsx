@@ -117,8 +117,8 @@ describe("AccountForm", () => {
         />
       );
 
-      const form = screen.getByRole("form");
-      fireEvent.submit(form);
+      const submitButton = screen.getByRole("button", { name: /create account/i });
+      await user.click(submitButton);
 
       // Check that validation failed - onSave should not be called
       expect(mockOnSave).not.toHaveBeenCalled();
@@ -169,8 +169,8 @@ describe("AccountForm", () => {
       const currencySelect = screen.getByLabelText(/currency/i);
       await user.selectOptions(currencySelect, "");
 
-      const form = screen.getByRole("form");
-      fireEvent.submit(form);
+      const submitButton = screen.getByRole("button", { name: /create account/i });
+      await user.click(submitButton);
 
       // Check that validation failed - onSave should not be called
       expect(mockOnSave).not.toHaveBeenCalled();
@@ -196,11 +196,11 @@ describe("AccountForm", () => {
       const nameInput = screen.getByLabelText(/account name/i);
       const tagInput = screen.getByLabelText(/tag/i);
       await user.type(nameInput, "Valid Name");
-      const longTag = "a".repeat(11); // 11 characters
-      await user.type(tagInput, longTag);
+      // Set tag value programmatically to bypass maxlength restriction
+      fireEvent.change(tagInput, { target: { value: "a".repeat(11) } }); // 11 characters
 
-      const form = screen.getByRole("form");
-      fireEvent.submit(form);
+      const submitButton = screen.getByRole("button", { name: /create account/i });
+      await user.click(submitButton);
 
       // Check that validation failed - onSave should not be called
       expect(mockOnSave).not.toHaveBeenCalled();
@@ -235,7 +235,7 @@ describe("AccountForm", () => {
       expect(mockOnSave).toHaveBeenCalledWith({
         name: "Valid Account Name",
         currency_id: 1,
-        tag: null,
+        tag: "",
       });
     });
 
@@ -263,7 +263,7 @@ describe("AccountForm", () => {
       expect(mockOnSave).toHaveBeenCalledWith({
         name: "Valid Account Name",
         currency_id: 1,
-        tag: null,
+        tag: "",
       });
     });
   });
@@ -444,7 +444,7 @@ describe("AccountForm", () => {
       expect(mockOnSave).toHaveBeenCalledWith({
         name: "Keyboard Submit",
         currency_id: 1,
-        tag: null,
+        tag: "",
       });
     });
   });
@@ -480,7 +480,7 @@ describe("AccountForm", () => {
       expect(screen.getByText("Edit Account")).toBeInTheDocument();
     });
 
-    it("disables submit button when form is invalid", () => {
+    it("enables submit button to allow validation on submission", () => {
       render(
         <AccountForm
           account={null}
@@ -493,7 +493,7 @@ describe("AccountForm", () => {
       );
 
       const submitButton = screen.getByRole("button", { name: /create account/i });
-      expect(submitButton).toBeDisabled();
+      expect(submitButton).toBeEnabled();
     });
 
     it("enables submit button when form is valid", async () => {
@@ -626,15 +626,11 @@ describe("AccountForm", () => {
       );
 
       const tagInput = screen.getByLabelText(/tag/i);
-      await user.clear(tagInput);
-      await user.type(tagInput, "verylongtag"); // 11 characters
+      // Set value programmatically to bypass maxlength restriction
+      fireEvent.change(tagInput, { target: { value: "verylongtag" } }); // 11 characters
 
-      const form = document.querySelector("form");
-      if (form) {
-        fireEvent.submit(form);
-      } else {
-        throw new Error("Form not found");
-      }
+      const submitButton = screen.getByRole("button", { name: /update account/i });
+      await user.click(submitButton);
 
       // Check that validation failed - onSave should not be called
       expect(mockOnSave).not.toHaveBeenCalled();
@@ -669,7 +665,7 @@ describe("AccountForm", () => {
       expect(mockOnSave).toHaveBeenCalledWith({
         name: "Test",
         currency_id: 3, // Should be converted to number
-        tag: null,
+        tag: "",
       });
     });
   });

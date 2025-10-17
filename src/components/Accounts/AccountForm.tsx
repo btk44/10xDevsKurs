@@ -117,7 +117,8 @@ export default function AccountForm({
     onSave(dataToSave);
   };
 
-  const isFormValid = formData.name.trim() && formData.currency_id > 0;
+  // Allow submission even when invalid so validation can run and show errors
+  const isFormValid = true;
   const isEditing = !!account;
 
   return (
