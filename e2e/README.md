@@ -29,7 +29,7 @@ This directory contains end-to-end tests using Playwright.
 
 3. **Group related tests** with `test.describe` blocks.
 
-4. **Use test hooks** for setup and teardown:
+4. **Use test hooks** for setup and teardown: 
    ```typescript
    test.beforeEach(async ({ page }) => {
      // Setup code
