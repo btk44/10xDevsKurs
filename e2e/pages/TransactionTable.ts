@@ -136,16 +136,20 @@ export class TransactionTable {
   }
 
   async getTransactionByDetails(date: string, amount: string, category: string): Promise<Locator> {
-    // Find transaction row that contains all these details
+    // Convert input date to display format (MM/DD/YYYY)
+    const inputDate = new Date(date);
+    const displayDate = inputDate.toLocaleDateString("en-US");
+
+    // Find transaction row that contains the category and amount, and check date separately
     return this.page
       .locator('[data-testid^="transaction-row-"]', {
-        hasText: date,
+        hasText: category,
       })
       .filter({
         hasText: amount,
       })
       .filter({
-        hasText: category,
+        hasText: displayDate,
       });
   }
 
