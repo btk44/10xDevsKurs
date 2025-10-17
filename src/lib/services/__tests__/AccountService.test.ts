@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AccountService } from "../AccountService";
-import { createMockSupabaseClient } from "../../../../tests/mocks/supabase";
+import { createMockSupabaseClient, type MockQueryBuilder } from "../../../../tests/mocks/supabase";
 import type { CreateAccountCommand, UpdateAccountCommand, AccountDTO } from "../../../types";
 
 describe("AccountService", () => {
@@ -9,7 +9,7 @@ describe("AccountService", () => {
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseClient();
-    accountService = new AccountService(mockSupabase as any);
+    accountService = new AccountService(mockSupabase);
   });
 
   describe("validateCurrency", () => {
@@ -23,7 +23,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await accountService.validateCurrency(1);
 
@@ -40,7 +40,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await accountService.validateCurrency(1);
 
@@ -57,7 +57,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await expect(accountService.validateCurrency(1)).rejects.toThrow("Failed to validate currency: Database error");
     });
@@ -119,9 +119,9 @@ describe("AccountService", () => {
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === "accounts") {
           // Return different builders for different calls
-          return detailsQueryBuilder as any;
+          return detailsQueryBuilder as MockQueryBuilder;
         }
-        return {} as any;
+        return {} as MockQueryBuilder;
       });
 
       // Mock the first call to be the insert
@@ -129,9 +129,9 @@ describe("AccountService", () => {
       mockSupabase.from.mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          return insertQueryBuilder as any;
+          return insertQueryBuilder as MockQueryBuilder;
         }
-        return detailsQueryBuilder as any;
+        return detailsQueryBuilder as MockQueryBuilder;
       });
 
       const result = await accountService.createAccount(validCommand, "user123");
@@ -169,7 +169,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await expect(accountService.createAccount(validCommand, "user123")).rejects.toThrow(
         "Failed to create account: Database error"
@@ -188,7 +188,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(insertQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(insertQueryBuilder as MockQueryBuilder);
 
       await expect(accountService.createAccount(validCommand, "user123")).rejects.toThrow(
         "Failed to create account: No data returned"
@@ -221,7 +221,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await accountService.getAccountById(1, "user123");
 
@@ -251,7 +251,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await accountService.getAccountById(1, "user123");
 
@@ -268,7 +268,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await expect(accountService.getAccountById(1, "user123")).rejects.toThrow(
         "Failed to retrieve account: Database error"
@@ -314,7 +314,9 @@ describe("AccountService", () => {
       let callCount = 0;
       mockSupabase.from.mockImplementation(() => {
         callCount++;
-        return callCount === 1 ? (mockViewQueryBuilder as any) : (mockFunctionQueryBuilder as any);
+        return callCount === 1
+          ? (mockViewQueryBuilder as MockQueryBuilder)
+          : (mockFunctionQueryBuilder as MockQueryBuilder);
       });
 
       mockSupabase.rpc.mockResolvedValue({ data: 150.75, error: null });
@@ -347,7 +349,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await accountService.getAccountsByUserId("user123", true);
 
@@ -377,7 +379,9 @@ describe("AccountService", () => {
       let callCount = 0;
       mockSupabase.from.mockImplementation(() => {
         callCount++;
-        return callCount === 1 ? (failingViewQueryBuilder as any) : (functionQueryBuilder as any);
+        return callCount === 1
+          ? (failingViewQueryBuilder as MockQueryBuilder)
+          : (functionQueryBuilder as MockQueryBuilder);
       });
 
       const result = await accountService.getAccountsByUserId("user123");
@@ -443,7 +447,9 @@ describe("AccountService", () => {
       mockSupabase.from.mockImplementation(() => {
         callCount++;
         // First call is update, second is getAccountById
-        return callCount === 1 ? (mockUpdateQueryBuilder as any) : (mockGetQueryBuilder as any);
+        return callCount === 1
+          ? (mockUpdateQueryBuilder as MockQueryBuilder)
+          : (mockGetQueryBuilder as MockQueryBuilder);
       });
 
       mockSupabase.rpc.mockResolvedValue(100.5);
@@ -510,7 +516,7 @@ describe("AccountService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await expect(accountService.updateAccount(1, validUpdateCommand, "user123")).rejects.toThrow(
         "Failed to update account: Duplicate key value"

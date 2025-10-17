@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TransactionService } from "../TransactionService";
 import { createMockSupabaseClient } from "../../../../tests/mocks/supabase";
 import type { UpdateTransactionCommand, GetTransactionsQuery, TransactionDTO } from "../../../types";
+import type { MockQueryBuilder } from "../../../../tests/mocks/supabase";
 
 describe("TransactionService", () => {
   let mockSupabase: ReturnType<typeof createMockSupabaseClient>;
@@ -9,7 +10,7 @@ describe("TransactionService", () => {
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseClient();
-    transactionService = new TransactionService(mockSupabase as any);
+    transactionService = new TransactionService(mockSupabase);
   });
 
   describe("validateAccountOwnership", () => {
@@ -23,7 +24,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.validateAccountOwnership(1, "user123");
 
@@ -40,7 +41,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.validateAccountOwnership(1, "user123");
 
@@ -57,7 +58,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await expect(transactionService.validateAccountOwnership(1, "user123")).rejects.toThrow(
         "Failed to validate account ownership: Database error"
@@ -76,7 +77,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.validateCategoryOwnership(1, "user123");
 
@@ -93,7 +94,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.validateCategoryOwnership(1, "user123");
 
@@ -127,7 +128,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.getTransactionById(1, "user123");
 
@@ -160,7 +161,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.getTransactionById(1, "user123");
 
@@ -225,7 +226,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.updateTransaction(validUpdateCommand, 1, "user123");
 
@@ -258,7 +259,7 @@ describe("TransactionService", () => {
       let callCount = 0;
       mockSupabase.from.mockImplementation(() => {
         callCount++;
-        return callCount === 1 ? (existenceQueryBuilder as any) : (updateQueryBuilder as any);
+        return callCount === 1 ? (existenceQueryBuilder as MockQueryBuilder) : (updateQueryBuilder as MockQueryBuilder);
       });
 
       vi.spyOn(transactionService, "validateAccountOwnership").mockResolvedValue(false);
@@ -293,7 +294,7 @@ describe("TransactionService", () => {
       let callCount = 0;
       mockSupabase.from.mockImplementation(() => {
         callCount++;
-        return callCount === 1 ? (existenceQueryBuilder as any) : (updateQueryBuilder as any);
+        return callCount === 1 ? (existenceQueryBuilder as MockQueryBuilder) : (updateQueryBuilder as MockQueryBuilder);
       });
 
       vi.spyOn(transactionService, "validateAccountOwnership").mockResolvedValue(true);
@@ -351,7 +352,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       const result = await transactionService.getTransactions(query, "user123");
 
@@ -400,7 +401,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await transactionService.getTransactions(query, "user123");
 
@@ -425,7 +426,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await transactionService.getTransactions(query, "user123");
 
@@ -448,7 +449,7 @@ describe("TransactionService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder as MockQueryBuilder);
 
       await transactionService.getTransactions(query, "user123");
 

@@ -1,28 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CategoryService } from "../CategoryService";
-import { createMockSupabaseClient } from "../../../../tests/mocks/supabase";
+import {
+  createMockSupabaseClient,
+  type MockQueryBuilder,
+  type MockSupabaseClient,
+} from "../../../../tests/mocks/supabase";
 import type { CreateCategoryCommand, UpdateCategoryCommand, CategoryDTO } from "../../../types";
 
 describe("CategoryService", () => {
-  let mockSupabase: ReturnType<typeof createMockSupabaseClient>;
+  let mockSupabase: MockSupabaseClient;
   let categoryService: CategoryService;
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseClient();
-    categoryService = new CategoryService(mockSupabase as any);
+    categoryService = new CategoryService(mockSupabase);
   });
 
   describe("validateInputs", () => {
     it("should throw error for invalid userId", () => {
       expect(() => categoryService["validateInputs"]("", "test")).toThrow("Valid user ID is required");
-      expect(() => categoryService["validateInputs"](null as any, "test")).toThrow("Valid user ID is required");
-      expect(() => categoryService["validateInputs"](undefined as any, "test")).toThrow("Valid user ID is required");
+      expect(() => categoryService["validateInputs"](null as string | null, "test")).toThrow(
+        "Valid user ID is required"
+      );
+      expect(() => categoryService["validateInputs"](undefined as string | undefined, "test")).toThrow(
+        "Valid user ID is required"
+      );
     });
 
     it("should throw error for invalid category name", () => {
       expect(() => categoryService["validateInputs"]("user123", "")).toThrow("Valid category name is required");
       expect(() => categoryService["validateInputs"]("user123", "   ")).toThrow("Valid category name is required");
-      expect(() => categoryService["validateInputs"]("user123", null as any)).toThrow(
+      expect(() => categoryService["validateInputs"]("user123", null as string | null)).toThrow(
         "Valid category name is required"
       );
     });
@@ -88,10 +96,10 @@ describe("CategoryService", () => {
     });
 
     it("should throw error for invalid database result", () => {
-      expect(() => categoryService["mapToCategoryDTO"](null as any)).toThrow(
+      expect(() => categoryService["mapToCategoryDTO"](null as CategoryDTO | null)).toThrow(
         "Invalid database result for category mapping"
       );
-      expect(() => categoryService["mapToCategoryDTO"](undefined as any)).toThrow(
+      expect(() => categoryService["mapToCategoryDTO"](undefined as CategoryDTO | undefined)).toThrow(
         "Invalid database result for category mapping"
       );
     });
@@ -99,7 +107,7 @@ describe("CategoryService", () => {
 
   describe("validateParentCategory", () => {
     it("should validate parent category successfully", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -108,13 +116,13 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService["validateParentCategory"](1, "user123", "expense")).resolves.not.toThrow();
     });
 
     it("should throw error when parent category not found", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -123,7 +131,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService["validateParentCategory"](1, "user123", "expense")).rejects.toThrow(
         "Parent category does not exist or is not active"
@@ -131,7 +139,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error when parent is already a subcategory", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -140,7 +148,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService["validateParentCategory"](1, "user123", "expense")).rejects.toThrow(
         "Maximum category depth is 2 levels"
@@ -148,7 +156,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error when category types don't match", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -157,7 +165,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService["validateParentCategory"](1, "user123", "expense")).rejects.toThrow(
         "Subcategory type must match parent category type"
@@ -165,7 +173,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error on database failure", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -174,7 +182,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService["validateParentCategory"](1, "user123", "expense")).rejects.toThrow(
         "Failed to validate parent category: Database error"
@@ -184,7 +192,7 @@ describe("CategoryService", () => {
 
   describe("validateCategoryNameUniqueness", () => {
     it("should validate name uniqueness successfully when no duplicates found", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
@@ -195,7 +203,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(
         categoryService["validateCategoryNameUniqueness"]("Test Category", 0, "user123")
@@ -203,7 +211,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error when duplicate category name found", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
@@ -217,7 +225,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService["validateCategoryNameUniqueness"]("Test Category", 0, "user123")).rejects.toThrow(
         "A category with this name already exists in the same location"
@@ -225,7 +233,7 @@ describe("CategoryService", () => {
     });
 
     it("should resolve when no duplicate category name found", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
@@ -236,7 +244,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(
         categoryService["validateCategoryNameUniqueness"]("Test Category", 0, "user123")
@@ -244,7 +252,7 @@ describe("CategoryService", () => {
     });
 
     it("should exclude current category when updating", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
@@ -255,7 +263,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(
         categoryService["validateCategoryNameUniqueness"]("Test Category", 0, "user123", 1)
@@ -265,7 +273,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error on database failure", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         ilike: vi.fn().mockReturnThis(),
@@ -279,7 +287,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService["validateCategoryNameUniqueness"]("Test Category", 0, "user123")).rejects.toThrow(
         "Failed to check category name uniqueness: Database error"
@@ -296,7 +304,7 @@ describe("CategoryService", () => {
     };
 
     it("should create category successfully", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -304,9 +312,14 @@ describe("CategoryService", () => {
       };
 
       // Mock validation calls
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
-      vi.spyOn(categoryService as any, "validateParentCategory").mockResolvedValue(undefined);
-      vi.spyOn(categoryService as any, "validateCategoryNameUniqueness").mockResolvedValue(undefined);
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateParentCategory").mockResolvedValue(
+        undefined
+      );
+      vi.spyOn(
+        categoryService as unknown as Record<string, unknown>,
+        "validateCategoryNameUniqueness"
+      ).mockResolvedValue(undefined);
 
       // Mock insert operation
       mockQueryBuilder.single.mockResolvedValueOnce({
@@ -324,7 +337,7 @@ describe("CategoryService", () => {
         error: null,
       });
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       const result = await categoryService.createCategory(validCommand, "user123");
 
@@ -344,11 +357,16 @@ describe("CategoryService", () => {
     it("should validate parent category when parent_id is provided", async () => {
       const commandWithParent = { ...validCommand, parent_id: 5 };
 
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
-      vi.spyOn(categoryService as any, "validateParentCategory").mockResolvedValue(undefined);
-      vi.spyOn(categoryService as any, "validateCategoryNameUniqueness").mockResolvedValue(undefined);
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateParentCategory").mockResolvedValue(
+        undefined
+      );
+      vi.spyOn(
+        categoryService as unknown as Record<string, unknown>,
+        "validateCategoryNameUniqueness"
+      ).mockResolvedValue(undefined);
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -367,7 +385,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await categoryService.createCategory(commandWithParent, "user123");
 
@@ -375,11 +393,16 @@ describe("CategoryService", () => {
     });
 
     it("should handle unique constraint violations", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
-      vi.spyOn(categoryService as any, "validateParentCategory").mockResolvedValue(undefined);
-      vi.spyOn(categoryService as any, "validateCategoryNameUniqueness").mockResolvedValue(undefined);
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateParentCategory").mockResolvedValue(
+        undefined
+      );
+      vi.spyOn(
+        categoryService as unknown as Record<string, unknown>,
+        "validateCategoryNameUniqueness"
+      ).mockResolvedValue(undefined);
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -388,7 +411,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService.createCategory(validCommand, "user123")).rejects.toThrow(
         "A category with this name already exists in the same location"
@@ -396,11 +419,16 @@ describe("CategoryService", () => {
     });
 
     it("should handle foreign key constraint violations", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
-      vi.spyOn(categoryService as any, "validateParentCategory").mockResolvedValue(undefined);
-      vi.spyOn(categoryService as any, "validateCategoryNameUniqueness").mockResolvedValue(undefined);
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateParentCategory").mockResolvedValue(
+        undefined
+      );
+      vi.spyOn(
+        categoryService as unknown as Record<string, unknown>,
+        "validateCategoryNameUniqueness"
+      ).mockResolvedValue(undefined);
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         insert: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -409,7 +437,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService.createCategory(validCommand, "user123")).rejects.toThrow(
         "Referenced parent category is invalid"
@@ -419,7 +447,7 @@ describe("CategoryService", () => {
 
   describe("getCategoryById", () => {
     it("should return category when found", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -438,7 +466,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       const result = await categoryService.getCategoryById(1, "user123");
 
@@ -456,7 +484,7 @@ describe("CategoryService", () => {
     });
 
     it("should return null when category not found", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -465,7 +493,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       const result = await categoryService.getCategoryById(1, "user123");
 
@@ -473,7 +501,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error on database failure", async () => {
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -482,7 +510,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService.getCategoryById(1, "user123")).rejects.toThrow(
         "Failed to retrieve category: Database error"
@@ -498,7 +526,7 @@ describe("CategoryService", () => {
 
     it("should update category successfully", async () => {
       // Mock validation
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
 
       // Mock getCategoryById
       vi.spyOn(categoryService, "getCategoryById").mockResolvedValue({
@@ -514,10 +542,13 @@ describe("CategoryService", () => {
       } as CategoryDTO);
 
       // Mock uniqueness validation
-      vi.spyOn(categoryService as any, "validateCategoryNameUniqueness").mockResolvedValue(undefined);
+      vi.spyOn(
+        categoryService as unknown as Record<string, unknown>,
+        "validateCategoryNameUniqueness"
+      ).mockResolvedValue(undefined);
 
       // Mock update operation
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -537,7 +568,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       const result = await categoryService.updateCategory(1, validUpdateCommand, "user123");
 
@@ -555,7 +586,7 @@ describe("CategoryService", () => {
     });
 
     it("should prevent self-referencing parent", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
       vi.spyOn(categoryService, "getCategoryById").mockResolvedValue({
         id: 1,
         user_id: "user123",
@@ -574,7 +605,7 @@ describe("CategoryService", () => {
     });
 
     it("should validate parent category when parent_id changes", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
       vi.spyOn(categoryService, "getCategoryById").mockResolvedValue({
         id: 1,
         user_id: "user123",
@@ -587,10 +618,15 @@ describe("CategoryService", () => {
         updated_at: "2024-01-01T00:00:00Z",
       } as CategoryDTO);
 
-      vi.spyOn(categoryService as any, "validateParentCategory").mockResolvedValue(undefined);
-      vi.spyOn(categoryService as any, "validateCategoryNameUniqueness").mockResolvedValue(undefined);
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateParentCategory").mockResolvedValue(
+        undefined
+      );
+      vi.spyOn(
+        categoryService as unknown as Record<string, unknown>,
+        "validateCategoryNameUniqueness"
+      ).mockResolvedValue(undefined);
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -610,7 +646,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await categoryService.updateCategory(1, { parent_id: 5 }, "user123");
 
@@ -618,7 +654,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error when category not found", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
       vi.spyOn(categoryService, "getCategoryById").mockResolvedValue(null);
 
       await expect(categoryService.updateCategory(1, validUpdateCommand, "user123")).rejects.toThrow(
@@ -629,7 +665,7 @@ describe("CategoryService", () => {
 
   describe("deleteCategory", () => {
     it("should delete category successfully when no active transactions", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
 
       vi.spyOn(categoryService, "getCategoryById").mockResolvedValue({
         id: 1,
@@ -644,14 +680,14 @@ describe("CategoryService", () => {
       } as CategoryDTO);
 
       // Mock transaction count check
-      const transactionQueryBuilder = {
+      const transactionQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         head: vi.fn().mockResolvedValue({ count: 0, error: null }),
       };
 
       // Mock delete operation
-      const categoryQueryBuilder = {
+      const categoryQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -660,16 +696,16 @@ describe("CategoryService", () => {
 
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === "transactions") {
-          return transactionQueryBuilder as any;
+          return transactionQueryBuilder;
         }
-        return categoryQueryBuilder as any;
+        return categoryQueryBuilder;
       });
 
       await expect(categoryService.deleteCategory(1, "user123")).resolves.not.toThrow();
     });
 
     it("should prevent deletion when active transactions exist", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
 
       vi.spyOn(categoryService, "getCategoryById").mockResolvedValue({
         id: 1,
@@ -684,7 +720,7 @@ describe("CategoryService", () => {
       } as CategoryDTO);
 
       // Mock transaction count check with transactions
-      const transactionQueryBuilder = {
+      const transactionQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         then: vi.fn().mockImplementation((resolve) => {
@@ -693,7 +729,7 @@ describe("CategoryService", () => {
       };
 
       // Mock category operations
-      const categoryQueryBuilder = {
+      const categoryQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -715,12 +751,12 @@ describe("CategoryService", () => {
 
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === "transactions") {
-          return transactionQueryBuilder as any;
+          return transactionQueryBuilder;
         }
         if (table === "categories") {
-          return categoryQueryBuilder as any;
+          return categoryQueryBuilder;
         }
-        return {} as any;
+        return {} as MockQueryBuilder;
       });
 
       await expect(categoryService.deleteCategory(1, "user123")).rejects.toThrow(
@@ -729,7 +765,7 @@ describe("CategoryService", () => {
     });
 
     it("should throw error when category not found", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
       vi.spyOn(categoryService, "getCategoryById").mockResolvedValue(null);
 
       await expect(categoryService.deleteCategory(1, "user123")).rejects.toThrow("Category not found or access denied");
@@ -738,9 +774,9 @@ describe("CategoryService", () => {
 
   describe("getCategories", () => {
     it("should retrieve categories with default filtering", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -764,7 +800,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       const result = await categoryService.getCategories({}, "user123");
 
@@ -773,9 +809,9 @@ describe("CategoryService", () => {
     });
 
     it("should apply category type filter", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -787,7 +823,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await categoryService.getCategories({ type: "income" }, "user123");
 
@@ -795,9 +831,9 @@ describe("CategoryService", () => {
     });
 
     it("should include inactive categories when requested", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -809,7 +845,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await categoryService.getCategories({ include_inactive: true }, "user123");
 
@@ -818,9 +854,9 @@ describe("CategoryService", () => {
     });
 
     it("should handle mapping errors gracefully", async () => {
-      vi.spyOn(categoryService as any, "validateInputs").mockImplementation(() => {});
+      vi.spyOn(categoryService as unknown as Record<string, unknown>, "validateInputs").mockImplementation(vi.fn());
 
-      const mockQueryBuilder = {
+      const mockQueryBuilder: MockQueryBuilder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -832,7 +868,7 @@ describe("CategoryService", () => {
         }),
       };
 
-      mockSupabase.from.mockReturnValue(mockQueryBuilder as any);
+      mockSupabase.from.mockReturnValue(mockQueryBuilder);
 
       await expect(categoryService.getCategories({}, "user123")).rejects.toThrow("Failed to map category at index 0");
     });

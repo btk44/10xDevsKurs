@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type MockedFunction } from "vitest";
 import { GET, POST } from "../accounts";
 import {
   createMockAuthenticatedContext,
@@ -7,7 +7,20 @@ import {
   createMockJSONRequest,
   parseResponse,
 } from "../../../../tests/mocks/api";
-import { createMockSupabaseClient } from "../../../../tests/mocks/supabase";
+import type { AccountDTO, CreateAccountCommand } from "../../../types";
+import type { ValidationErrorDetail } from "../../../types";
+
+// Types for mocked functions
+interface MockAccountService {
+  getAccountsByUserId: MockedFunction<(userId: string, includeInactive?: boolean) => Promise<AccountDTO[]>>;
+  createAccount: MockedFunction<(command: CreateAccountCommand, userId: string) => Promise<AccountDTO>>;
+}
+
+type ValidationResult<T> = { success: true; data: T } | { success: false; errors: ValidationErrorDetail[] };
+
+type MockValidateRequestBody = MockedFunction<<T>(schema: unknown, body: unknown) => ValidationResult<T>>;
+
+type MockAccountServiceConstructor = MockedFunction<(supabase: unknown) => MockAccountService>;
 
 // Mock the AccountService
 vi.mock("../../../lib/services/AccountService", () => ({
@@ -31,17 +44,15 @@ import { CreateAccountCommandSchema } from "../../../lib/validation/schemas";
 import { validateRequestBody } from "../../../lib/validation/utils";
 
 describe("GET /api/accounts", () => {
-  let mockAccountService: any;
-  let mockSupabase: any;
+  let mockAccountService: MockAccountService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSupabase = createMockSupabaseClient();
     mockAccountService = {
-      getAccountsByUserId: vi.fn(),
-      createAccount: vi.fn(),
+      getAccountsByUserId: vi.fn<(userId: string, includeInactive?: boolean) => Promise<AccountDTO[]>>(),
+      createAccount: vi.fn<(command: CreateAccountCommand, userId: string) => Promise<AccountDTO>>(),
     };
-    (AccountService as any).mockImplementation(() => mockAccountService);
+    (AccountService as MockAccountServiceConstructor).mockImplementation(() => mockAccountService);
   });
 
   afterEach(() => {
@@ -257,15 +268,15 @@ describe("GET /api/accounts", () => {
 });
 
 describe("POST /api/accounts", () => {
-  let mockAccountService: any;
+  let mockAccountService: MockAccountService;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockAccountService = {
-      getAccountsByUserId: vi.fn(),
-      createAccount: vi.fn(),
+      getAccountsByUserId: vi.fn<(userId: string, includeInactive?: boolean) => Promise<AccountDTO[]>>(),
+      createAccount: vi.fn<(command: CreateAccountCommand, userId: string) => Promise<AccountDTO>>(),
     };
-    (AccountService as any).mockImplementation(() => mockAccountService);
+    (AccountService as MockAccountServiceConstructor).mockImplementation(() => mockAccountService);
   });
 
   afterEach(() => {
@@ -288,7 +299,7 @@ describe("POST /api/accounts", () => {
         created_at: "2024-01-15T10:00:00Z",
       };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -338,7 +349,7 @@ describe("POST /api/accounts", () => {
     it("validates request body against schema", async () => {
       const invalidCommand = { invalidField: "value" };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: false,
         errors: [
           { field: "name", message: "Name is required" },
@@ -381,7 +392,7 @@ describe("POST /api/accounts", () => {
       const userId = "authenticated-user-456";
       const createCommand = { name: "Test Account", currency_code: "EUR" };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -401,7 +412,7 @@ describe("POST /api/accounts", () => {
     it("handles currency not found error", async () => {
       const createCommand = { name: "Test Account", currency_code: "INVALID" };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -422,7 +433,7 @@ describe("POST /api/accounts", () => {
     it("handles database operation failures", async () => {
       const createCommand = { name: "Test Account", currency_code: "USD" };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -443,7 +454,7 @@ describe("POST /api/accounts", () => {
     it("handles unexpected errors with generic response", async () => {
       const createCommand = { name: "Test Account", currency_code: "USD" };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -465,7 +476,7 @@ describe("POST /api/accounts", () => {
       const createCommand = { name: "Test Account", currency_code: "USD" };
       const createdAccount = { id: 1, name: "Test Account", currency_code: "USD" };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -500,7 +511,7 @@ describe("POST /api/accounts", () => {
         updated_at: "2024-01-20T15:30:00Z",
       };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -521,7 +532,7 @@ describe("POST /api/accounts", () => {
     it("initializes AccountService with correct supabase client for POST", async () => {
       const createCommand = { name: "Test", currency_code: "USD" };
 
-      (validateRequestBody as any).mockReturnValue({
+      (validateRequestBody as MockValidateRequestBody).mockReturnValue({
         success: true,
         data: createCommand,
       });

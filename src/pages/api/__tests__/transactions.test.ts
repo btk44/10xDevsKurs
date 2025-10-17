@@ -7,7 +7,7 @@ import {
   createMockJSONRequest,
   parseResponse,
 } from "../../../../tests/mocks/api";
-import { createMockSupabaseClient } from "../../../../tests/mocks/supabase";
+import type { GetTransactionsQuery, CreateTransactionCommand } from "../../../types";
 
 // Mock the TransactionService
 vi.mock("../../../lib/services/TransactionService", () => ({
@@ -17,34 +17,55 @@ vi.mock("../../../lib/services/TransactionService", () => ({
 // Mock the validation schemas
 vi.mock("../../../lib/validation/schemas", () => ({
   GetTransactionsQuerySchema: {
-    safeParse: vi.fn(),
+    safeParse: vi.fn<
+      () => {
+        success: boolean;
+        data?: GetTransactionsQuery;
+        error?: { issues: { message: string }[] };
+      }
+    >(),
   },
   CreateTransactionCommandSchema: {
-    safeParse: vi.fn(),
+    safeParse: vi.fn<
+      () => {
+        success: boolean;
+        data?: CreateTransactionCommand;
+        error?: { issues: { message: string }[] };
+      }
+    >(),
   },
 }));
 
 // Mock the validation utils
 vi.mock("../../../lib/validation/utils", () => ({
-  formatZodErrors: vi.fn(),
+  formatZodErrors: vi.fn<(errors: { message: string }[]) => { field: string; message: string }[]>(),
 }));
 
 import { TransactionService } from "../../../lib/services/TransactionService";
 import { GetTransactionsQuerySchema, CreateTransactionCommandSchema } from "../../../lib/validation/schemas";
 import { formatZodErrors } from "../../../lib/validation/utils";
 
+const GetTransactionsQuerySchemaMock = GetTransactionsQuerySchema as unknown as {
+  safeParse: ReturnType<typeof vi.fn>;
+};
+const CreateTransactionCommandSchemaMock = CreateTransactionCommandSchema as unknown as {
+  safeParse: ReturnType<typeof vi.fn>;
+};
+const formatZodErrorsMock = formatZodErrors as unknown as ReturnType<typeof vi.fn>;
+
 describe("GET /api/transactions", () => {
-  let mockTransactionService: any;
-  let mockSupabase: any;
+  let mockTransactionService: {
+    getTransactions: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSupabase = createMockSupabaseClient();
     mockTransactionService = {
       getTransactions: vi.fn(),
       create: vi.fn(),
     };
-    (TransactionService as any).mockImplementation(() => mockTransactionService);
+    (TransactionService as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => mockTransactionService);
   });
 
   afterEach(() => {
@@ -65,7 +86,7 @@ describe("GET /api/transactions", () => {
         data: validQuery,
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: [],
@@ -109,8 +130,8 @@ describe("GET /api/transactions", () => {
         error: { issues: [{ message: "Invalid page number" }] },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
-      (formatZodErrors as any).mockReturnValue([{ field: "page", message: "Page must be a positive integer" }]);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
+      formatZodErrorsMock.mockReturnValue([{ field: "page", message: "Page must be a positive integer" }]);
 
       const context = createMockAuthenticatedContext();
       context.request = createMockRequestWithQuery("/api/transactions", {
@@ -147,7 +168,7 @@ describe("GET /api/transactions", () => {
         },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       const context = createMockAuthenticatedContext();
       context.request = createMockRequestWithQuery("/api/transactions", {
@@ -172,7 +193,7 @@ describe("GET /api/transactions", () => {
         },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       const context = createMockAuthenticatedContext();
       context.request = createMockRequestWithQuery("/api/transactions", {
@@ -195,7 +216,7 @@ describe("GET /api/transactions", () => {
         data: { search: longSearchTerm },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       const context = createMockAuthenticatedContext();
       context.request = createMockRequestWithQuery("/api/transactions", {
@@ -216,7 +237,7 @@ describe("GET /api/transactions", () => {
         data: { page: 10001 }, // Exceeds max page limit
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       const context = createMockAuthenticatedContext();
       context.request = createMockRequestWithQuery("/api/transactions", {
@@ -285,8 +306,8 @@ describe("GET /api/transactions", () => {
         error: { issues: [{ message: "Invalid amount" }] },
       };
 
-      (CreateTransactionCommandSchema.safeParse as any).mockReturnValue(mockValidationResult);
-      (formatZodErrors as any).mockReturnValue([{ field: "amount", message: "Amount must be a positive number" }]);
+      CreateTransactionCommandSchemaMock.safeParse.mockReturnValue(mockValidationResult);
+      formatZodErrorsMock.mockReturnValue([{ field: "amount", message: "Amount must be a positive number" }]);
 
       const context = createMockAuthenticatedContext();
       context.request = createMockJSONRequest(invalidCommand);
@@ -343,7 +364,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: [],
@@ -363,10 +384,10 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       const context = createMockAuthenticatedContext();
-      context.locals.supabase = null as any;
+      context.locals.supabase = null;
 
       const response = await GET(context);
       const result = await parseResponse(response);
@@ -384,7 +405,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       // Mock service to throw a "not found" error
       mockTransactionService.getTransactions.mockRejectedValue(new Error("Transaction not found or access denied"));
@@ -405,7 +426,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockRejectedValue(new Error("Database schema error"));
 
@@ -425,7 +446,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockRejectedValue(new Error("Access denied: insufficient permissions"));
 
@@ -445,7 +466,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockRejectedValue(new Error("Failed to fetch transactions"));
 
@@ -465,7 +486,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockRejectedValue(new Error("Unexpected error message"));
 
@@ -497,7 +518,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: [],
@@ -521,7 +542,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       // Mock a slow service call
       mockTransactionService.getTransactions.mockImplementation(
@@ -551,7 +572,7 @@ describe("GET /api/transactions", () => {
         data: { page: 5, limit: 10 }, // Requesting page 5
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: [], // No results on this page
@@ -599,7 +620,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: mockTransactions,
@@ -656,7 +677,7 @@ describe("GET /api/transactions", () => {
         data: createCommand,
       };
 
-      (CreateTransactionCommandSchema.safeParse as any).mockReturnValue(mockValidationResult);
+      CreateTransactionCommandSchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.create.mockResolvedValue(createdTransaction);
 
@@ -690,7 +711,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: [],
@@ -728,7 +749,7 @@ describe("GET /api/transactions", () => {
         data: complexQuery,
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: [],
@@ -757,7 +778,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockRejectedValue(new Error("Database connection failed"));
 
@@ -784,7 +805,7 @@ describe("GET /api/transactions", () => {
         data: createCommand,
       };
 
-      (CreateTransactionCommandSchema.safeParse as any).mockReturnValue(mockValidationResult);
+      CreateTransactionCommandSchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.create.mockRejectedValue(new Error("Account not found or not accessible"));
 
@@ -804,7 +825,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue({
         data: [],
@@ -844,7 +865,7 @@ describe("GET /api/transactions", () => {
         data: { page: 1, limit: 10 },
       };
 
-      (GetTransactionsQuerySchema.safeParse as any).mockReturnValue(mockValidationResult);
+      GetTransactionsQuerySchemaMock.safeParse.mockReturnValue(mockValidationResult);
 
       mockTransactionService.getTransactions.mockResolvedValue(serviceResponse);
 
