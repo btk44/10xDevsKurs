@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { testUsers } from "../fixtures/test-users";
 import { LoginPage } from "./index";
 
 test.describe("Login Page", () => {
@@ -20,7 +19,14 @@ test.describe("Login Page", () => {
 
   test("should login successfully with valid credentials", async () => {
     // Attempt to login with test user credentials
-    await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+    const testEmail = process.env.E2E_USERNAME;
+    const testPassword = process.env.E2E_PASSWORD;
+
+    if (!testEmail || !testPassword) {
+      throw new Error("E2E_USERNAME and E2E_PASSWORD environment variables are required");
+    }
+
+    await loginPage.login(testEmail, testPassword);
 
     // Check for elements that indicate successful login
     // This could be a logout button, user menu, or main app content

@@ -59,7 +59,6 @@ Handles account creation and editing form interactions.
 
 ```typescript
 import { test, expect } from "@playwright/test";
-import { testUsers } from "../fixtures/test-users";
 import { LoginPage, NavigationPage, AccountsPage, AccountForm } from "../pages";
 
 test("create new account", async ({ page }) => {
@@ -104,14 +103,18 @@ test("validate account form", async ({ page }) => {
 
 ## Test Data
 
-Test user credentials are available in `fixtures/test-users.ts`:
+Test user credentials are loaded from environment variables defined in `.env.test`:
 
 ```typescript
-import { testUsers } from "../fixtures/test-users";
+// Test credentials are loaded from environment variables
+const testEmail = process.env.E2E_USERNAME;
+const testPassword = process.env.E2E_PASSWORD;
 
 // Use in tests
-await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+await loginPage.login(testEmail, testPassword);
 ```
+
+Make sure to set the `E2E_USERNAME` and `E2E_PASSWORD` environment variables in your `.env.test` file.
 
 ## Best Practices
 
@@ -145,8 +148,6 @@ e2e/
 │   ├── AccountsPage.ts
 │   ├── AccountForm.ts
 │   └── index.ts       # Exports all POM classes
-├── fixtures/          # Test data
-│   └── test-users.ts
 ├── utils/            # Helper utilities
 │   └── auth.ts
 └── pages/           # Test files (organized by page)

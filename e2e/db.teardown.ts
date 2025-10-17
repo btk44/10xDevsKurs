@@ -1,7 +1,6 @@
 import { test as teardown } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/db/database.types";
-import { testUsers } from "./fixtures/test-users";
 
 // Create Supabase client for Node.js environment
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -18,9 +17,16 @@ teardown("cleanup database", async () => {
 
   try {
     // Authenticate as the test user
+    const testEmail = process.env.E2E_USERNAME;
+    const testPassword = process.env.E2E_PASSWORD;
+
+    if (!testEmail || !testPassword) {
+      throw new Error("E2E_USERNAME and E2E_PASSWORD environment variables are required");
+    }
+
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: testUsers.standard.email,
-      password: testUsers.standard.password,
+      email: testEmail,
+      password: testPassword,
     });
 
     if (authError) {
