@@ -3,6 +3,7 @@
 ## Installed Dependencies
 
 ### Unit Testing (Vitest)
+
 - vitest
 - jsdom
 - @testing-library/react
@@ -12,27 +13,32 @@
 - @testing-library/user-event
 
 ### E2E Testing (Playwright)
+
 - @playwright/test
 - Chromium browser
 
 ## Configuration Files
 
 ### Vitest Configuration
+
 - `vitest.config.ts`: Configuration for Vitest
 - `tests/setup.ts`: Setup file for Vitest with mocks
 
 ### Playwright Configuration
+
 - `playwright.config.ts`: Configuration for Playwright E2E tests
 
 ## Directory Structure
 
 ### Unit Tests
+
 - `src/components/__tests__`: Component tests
 - `src/lib/__tests__`: Service tests
 - `tests/mocks`: Mock implementations
 - `tests/utils.tsx`: Testing utilities
 
 ### E2E Tests
+
 - `e2e/pages`: Page tests
 - `e2e/fixtures`: Test data
 - `e2e/utils`: Test utilities
@@ -53,10 +59,12 @@
 ## Sample Tests
 
 ### Unit Test Example
+
 A unit test for the Button component has been created at:
 `src/components/ui/__tests__/button.test.tsx`
 
 ### E2E Test Example
+
 An E2E test for the login page has been created at:
 `e2e/pages/login.spec.ts`
 

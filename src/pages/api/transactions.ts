@@ -237,7 +237,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Enhanced pagination validation
     const page = query.page || 1;
-    const limit = query.limit || 50;
 
     // Prevent unreasonable pagination requests
     if (page > 10000) {

@@ -14,6 +14,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
 ### Parameters:
 
 **Required**:
+
 - `transaction_date`: ISO 8601 timestamp string
 - `account_id`: Number (must exist in user's active accounts)
 - `category_id`: Number (must exist in user's active categories)
@@ -21,9 +22,11 @@ This endpoint creates a new financial transaction for the authenticated user. It
 - `currency_id`: Number (must exist in currencies table)
 
 **Optional**:
+
 - `comment`: String (max 255 characters)
 
 ### Request Body Example:
+
 ```json
 {
   "transaction_date": "2025-10-10T14:30:00Z",
@@ -38,6 +41,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
 ## 3. Used Types
 
 ### Command Models:
+
 - `CreateTransactionCommand`: Input validation and data transfer
   ```typescript
   type CreateTransactionCommand = Pick<
@@ -47,6 +51,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
   ```
 
 ### Response DTOs:
+
 - `TransactionDTO`: Complete transaction data with joins
 - `ApiResponse<TransactionDTO>`: Wrapper for successful response
 - `ApiErrorResponse`: Error response wrapper
@@ -56,6 +61,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
 ## 4. Response Details
 
 ### Success Response (201 Created):
+
 ```json
 {
   "data": {
@@ -79,6 +85,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
 ```
 
 ### Error Responses:
+
 - **400 Bad Request**: Validation errors
 - **401 Unauthorized**: Missing/invalid authentication
 - **500 Internal Server Error**: Database or server errors
@@ -88,7 +95,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
 1. **Request Reception**: Astro API endpoint receives POST request
 2. **Authentication**: Extract and validate user_id from auth context
 3. **Input Validation**: Validate request body against CreateTransactionCommand schema
-4. **Business Validation**: 
+4. **Business Validation**:
    - Verify account exists and belongs to user
    - Verify category exists and belongs to user
    - Verify currency exists
@@ -98,6 +105,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
 7. **Response**: Return 201 with complete transaction data
 
 ### Database Interactions:
+
 - **INSERT**: `transactions` table with user_id, validated foreign keys
 - **SELECT**: Join query to fetch transaction with account, category, and currency details
 - **Validation Queries**: Check account and category ownership and active status
@@ -105,27 +113,32 @@ This endpoint creates a new financial transaction for the authenticated user. It
 ## 6. Security Considerations
 
 ### Authentication & Authorization:
+
 - Validate user authentication token
 - Extract user_id from auth context
 - Ensure RLS policies prevent access to other users' data
 
 ### Input Validation:
+
 - Sanitize all input fields to prevent SQL injection
 - Validate data types and constraints
 - Check foreign key relationships and ownership
 
 ### Data Access Control:
+
 - User can only create transactions for their own accounts and categories
 - RLS policies ensure data isolation
 - Validate account and category are active and belong to user
 
 ### Rate Limiting:
+
 - Consider implementing rate limiting to prevent abuse
 - Monitor for unusual transaction creation patterns
 
 ## 7. Error Handling
 
 ### Validation Errors (400 Bad Request):
+
 - **Invalid transaction_date**: "Invalid date format, must be ISO 8601"
 - **Missing required fields**: "Field [field_name] is required"
 - **Invalid amount**: "Amount must be greater than 0 and less than 9999999999.99"
@@ -135,16 +148,19 @@ This endpoint creates a new financial transaction for the authenticated user. It
 - **Comment too long**: "Comment must be 255 characters or less"
 
 ### Authentication Errors (401 Unauthorized):
+
 - Missing auth token
 - Invalid auth token
 - Expired auth token
 
 ### Server Errors (500 Internal Server Error):
+
 - Database connection issues
 - Constraint violations
 - Unexpected database errors
 
 ### Error Response Format:
+
 ```json
 {
   "error": {
@@ -163,20 +179,24 @@ This endpoint creates a new financial transaction for the authenticated user. It
 ## 8. Performance Considerations
 
 ### Database Optimization:
+
 - Use indexes on foreign key columns (account_id, category_id, currency_id)
 - Leverage partial indexes on active transactions
 - Minimize number of database queries through efficient joins
 
 ### Query Efficiency:
+
 - Single INSERT for transaction creation
 - Efficient JOIN query for response data retrieval
 - Use prepared statements to prevent SQL injection and improve performance
 
 ### Caching Considerations:
+
 - Consider caching currency data (rarely changes)
 - Account and category validation queries could benefit from short-term caching
 
 ### Monitoring:
+
 - Track response times and database query performance
 - Monitor transaction creation frequency per user
 - Alert on unusual patterns or high error rates
@@ -204,7 +224,7 @@ This endpoint creates a new financial transaction for the authenticated user. It
    - INSERT query for transaction creation with user_id
    - JOIN query for fetching complete transaction data:
      ```sql
-     SELECT t.*, a.name as account_name, c.name as category_name, 
+     SELECT t.*, a.name as account_name, c.name as category_name,
             c.category_type, cur.code as currency_code
      FROM transactions t
      JOIN accounts a ON t.account_id = a.id

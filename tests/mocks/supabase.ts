@@ -1,33 +1,32 @@
-import { vi } from "vitest";
-import type { PostgrestQueryBuilder } from "@supabase/postgrest-js";
+import type { MockedFunction } from "vitest";
 
 interface MockQueryBuilder {
-  select: vi.MockedFunction<any>;
-  insert: vi.MockedFunction<any>;
-  update: vi.MockedFunction<any>;
-  delete: vi.MockedFunction<any>;
-  eq: vi.MockedFunction<any>;
-  neq: vi.MockedFunction<any>;
-  ilike: vi.MockedFunction<any>;
-  order: vi.MockedFunction<any>;
-  limit: vi.MockedFunction<any>;
-  single: vi.MockedFunction<any>;
-  head: vi.MockedFunction<any>;
-  rpc: vi.MockedFunction<any>;
+  select: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  insert: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  update: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  delete: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  eq: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  neq: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  ilike: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  order: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  limit: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
+  single: MockedFunction<() => Promise<unknown>>;
+  head: MockedFunction<() => Promise<unknown>>;
+  rpc: MockedFunction<(...args: unknown[]) => MockQueryBuilder>;
 }
 
-interface MockSupabaseClient {
+export interface MockSupabaseClient {
   auth: {
-    getUser: vi.MockedFunction<any>;
-    signInWithPassword: vi.MockedFunction<any>;
-    signUp: vi.MockedFunction<any>;
-    signOut: vi.MockedFunction<any>;
-    getSession: vi.MockedFunction<any>;
-    resetPasswordForEmail: vi.MockedFunction<any>;
-    updateUser: vi.MockedFunction<any>;
+    getUser: MockedFunction<() => Promise<unknown>>;
+    signInWithPassword: MockedFunction<(...args: unknown[]) => Promise<unknown>>;
+    signUp: MockedFunction<() => Promise<unknown>>;
+    signOut: MockedFunction<() => Promise<unknown>>;
+    getSession: MockedFunction<() => Promise<unknown>>;
+    resetPasswordForEmail: MockedFunction<(...args: unknown[]) => Promise<unknown>>;
+    updateUser: MockedFunction<(...args: unknown[]) => Promise<unknown>>;
   };
-  from: vi.MockedFunction<any>;
-  rpc: vi.MockedFunction<any>;
+  from: MockedFunction<(table: string) => MockQueryBuilder>;
+  rpc: MockedFunction<(...args: unknown[]) => Promise<unknown>>;
 }
 
 export const createMockSupabaseClient = (): MockSupabaseClient => {
@@ -57,6 +56,7 @@ export const createMockSupabaseClient = (): MockSupabaseClient => {
     return chain;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const mockFrom = vi.fn((table: string) => createQueryChain());
 
   return {
@@ -100,7 +100,7 @@ export const createMockSupabaseClientWithData = () => {
     // Set up count response for transaction checks
     if (table === "transactions") {
       queryBuilder.select.mockImplementation((columns?: string) => {
-        if (columns === "*" && queryBuilder.head) {
+        if (columns === "*") {
           return {
             ...queryBuilder,
             head: vi.fn().mockResolvedValue({ count: 0, error: null }),

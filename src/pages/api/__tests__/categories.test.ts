@@ -7,7 +7,6 @@ import {
   createMockJSONRequest,
   parseResponse,
 } from "../../../../tests/mocks/api";
-import { createMockSupabaseClient } from "../../../../tests/mocks/supabase";
 
 // Mock the CategoryService
 vi.mock("../../../lib/services/CategoryService", () => ({
@@ -27,18 +26,23 @@ vi.mock("../../../lib/validation/schemas", () => ({
 import { CategoryService } from "../../../lib/services/CategoryService";
 import { GetCategoriesQuerySchema, CreateCategoryCommandSchema } from "../../../lib/validation/schemas";
 
+interface MockCategoryService {
+  getCategories: ReturnType<typeof vi.fn>;
+  createCategory: ReturnType<typeof vi.fn>;
+}
+
+type MockSchemaSafeParse = ReturnType<typeof vi.fn>;
+
 describe("GET /api/categories", () => {
-  let mockCategoryService: any;
-  let mockSupabase: any;
+  let mockCategoryService: MockCategoryService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSupabase = createMockSupabaseClient();
     mockCategoryService = {
       getCategories: vi.fn(),
       createCategory: vi.fn(),
     };
-    (CategoryService as any).mockImplementation(() => mockCategoryService);
+    (CategoryService as ReturnType<typeof vi.fn>).mockImplementation(() => mockCategoryService);
   });
 
   afterEach(() => {
@@ -61,7 +65,7 @@ describe("GET /api/categories", () => {
 
       const mockCategories = [{ id: 1, name: "Groceries", type: "expense", is_active: true }];
 
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: expectedParsedQuery,
       });
@@ -98,7 +102,7 @@ describe("GET /api/categories", () => {
         { id: 2, name: "Category 2", type: "expense", is_active: true },
       ];
 
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: expectedParsedQuery,
       });
@@ -107,14 +111,14 @@ describe("GET /api/categories", () => {
 
       const context = createMockAuthenticatedCategoriesContext();
 
-      const response = await GET(context);
+      await GET(context);
 
       expect(GetCategoriesQuerySchema.safeParse).toHaveBeenCalledWith({});
       expect(mockCategoryService.getCategories).toHaveBeenCalledWith(expectedParsedQuery, "test-user-id");
     });
 
     it("validates category type enum values", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: false,
         error: {
           errors: [
@@ -140,7 +144,7 @@ describe("GET /api/categories", () => {
     });
 
     it("validates parent_id as number", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: false,
         error: {
           errors: [
@@ -164,7 +168,7 @@ describe("GET /api/categories", () => {
     });
 
     it("validates parent_id minimum value", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: false,
         error: {
           errors: [
@@ -188,7 +192,7 @@ describe("GET /api/categories", () => {
     });
 
     it("validates include_inactive boolean values", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: false,
         error: {
           errors: [
@@ -233,7 +237,7 @@ describe("GET /api/categories", () => {
     it("passes authenticated user context to service layer", async () => {
       const userId = "authenticated-user-789";
 
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -250,7 +254,7 @@ describe("GET /api/categories", () => {
 
   describe("Error Handling & Response Formatting", () => {
     it("handles database connection errors", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -268,7 +272,7 @@ describe("GET /api/categories", () => {
     });
 
     it("handles authentication/JWT errors", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -286,7 +290,7 @@ describe("GET /api/categories", () => {
     });
 
     it("handles user ID validation errors", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -304,7 +308,7 @@ describe("GET /api/categories", () => {
     });
 
     it("handles unexpected errors with detailed information", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -323,7 +327,7 @@ describe("GET /api/categories", () => {
     });
 
     it("includes proper cache control headers", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -372,7 +376,7 @@ describe("GET /api/categories", () => {
         },
       ];
 
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: expectedParsedQuery,
       });
@@ -390,7 +394,7 @@ describe("GET /api/categories", () => {
     });
 
     it("handles empty categories list correctly", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -407,7 +411,7 @@ describe("GET /api/categories", () => {
     });
 
     it("initializes CategoryService with correct supabase client", async () => {
-      (GetCategoriesQuerySchema.safeParse as any).mockReturnValue({
+      (GetCategoriesQuerySchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: {},
       });
@@ -424,7 +428,7 @@ describe("GET /api/categories", () => {
 });
 
 describe("POST /api/categories", () => {
-  let mockCategoryService: any;
+  let mockCategoryService: MockCategoryService;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -432,7 +436,7 @@ describe("POST /api/categories", () => {
       getCategories: vi.fn(),
       createCategory: vi.fn(),
     };
-    (CategoryService as any).mockImplementation(() => mockCategoryService);
+    (CategoryService as ReturnType<typeof vi.fn>).mockImplementation(() => mockCategoryService);
   });
 
   afterEach(() => {
@@ -454,7 +458,7 @@ describe("POST /api/categories", () => {
         created_at: "2024-01-15T10:00:00Z",
       };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -487,7 +491,7 @@ describe("POST /api/categories", () => {
     it("validates required fields in category creation", async () => {
       const invalidCommand = { name: "Test" }; // Missing type
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: false,
         error: {
           errors: [
@@ -534,7 +538,7 @@ describe("POST /api/categories", () => {
       const userId = "authenticated-user-999";
       const createCommand = { name: "Test Category", type: "income" };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -554,7 +558,7 @@ describe("POST /api/categories", () => {
     it("handles parent category not found error", async () => {
       const createCommand = { name: "Subcategory", type: "expense", parent_id: 999 };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -576,7 +580,7 @@ describe("POST /api/categories", () => {
     it("handles duplicate category name error", async () => {
       const createCommand = { name: "Existing Category", type: "expense" };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -599,7 +603,7 @@ describe("POST /api/categories", () => {
     it("handles maximum hierarchy depth error", async () => {
       const createCommand = { name: "Deep Category", type: "expense", parent_id: 1 };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -620,7 +624,7 @@ describe("POST /api/categories", () => {
     it("handles type mismatch with parent error", async () => {
       const createCommand = { name: "Wrong Type", type: "income", parent_id: 1 };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -641,7 +645,7 @@ describe("POST /api/categories", () => {
     it("handles unexpected errors with generic response", async () => {
       const createCommand = { name: "Test", type: "expense" };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -663,7 +667,7 @@ describe("POST /api/categories", () => {
       const createCommand = { name: "New Category", type: "income" };
       const createdCategory = { id: 1, name: "New Category", type: "income" };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -697,7 +701,7 @@ describe("POST /api/categories", () => {
         created_at: "2024-01-20T15:30:00Z",
       };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -731,7 +735,7 @@ describe("POST /api/categories", () => {
         created_at: "2024-01-21T10:15:00Z",
       };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });
@@ -752,7 +756,7 @@ describe("POST /api/categories", () => {
     it("initializes CategoryService with correct supabase client for POST", async () => {
       const createCommand = { name: "Test", type: "expense" };
 
-      (CreateCategoryCommandSchema.safeParse as any).mockReturnValue({
+      (CreateCategoryCommandSchema.safeParse as MockSchemaSafeParse).mockReturnValue({
         success: true,
         data: createCommand,
       });

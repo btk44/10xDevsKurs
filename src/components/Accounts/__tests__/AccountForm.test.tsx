@@ -2,13 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../../../../tests/utils";
 import userEvent from "@testing-library/user-event";
 import AccountForm from "../AccountForm";
-import type {
-  AccountDTO,
-  CurrencyDTO,
-  CreateAccountCommand,
-  UpdateAccountCommand,
-  ValidationErrorDetail,
-} from "../../../types";
+import type { AccountDTO, CurrencyDTO, ValidationErrorDetail } from "../../../types";
 
 // Mock data
 const mockCurrencies: CurrencyDTO[] = [
@@ -23,6 +17,7 @@ const mockAccount: AccountDTO = {
   name: "Test Account",
   currency_id: 1,
   currency_code: "USD",
+  currency_description: "US Dollar",
   balance: 1000.5,
   tag: "test",
   active: true,

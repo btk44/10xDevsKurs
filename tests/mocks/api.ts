@@ -1,16 +1,32 @@
-import { vi } from "vitest";
-import type { APIRoute } from "astro";
 import type { User } from "@supabase/supabase-js";
-import { createMockSupabaseClient } from "./supabase";
+import { createMockSupabaseClient, type MockSupabaseClient } from "./supabase";
 
 export interface MockAPIRouteContext {
   request: Request;
   locals: {
     user?: User | null;
-    supabase: ReturnType<typeof createMockSupabaseClient>;
+    supabase: MockSupabaseClient | null;
+    session?: unknown;
   };
   params: Record<string, string | undefined>;
   url: URL;
+  site: URL;
+  generator: string;
+  props: Record<string, unknown>;
+  redirect: (path: string, status?: number) => Response;
+  rewrite: (path: string) => Promise<Response>;
+  preferredLocale: string | null;
+  preferredLocaleList: string[];
+  currentLocale: string;
+  clientAddress: string;
+  getActionResult: () => unknown;
+  callAction: (action: unknown, input: unknown) => Promise<unknown>;
+  getClientAddress: () => string;
+  routePattern: string;
+  cookies: Record<string, string>;
+  originPathname: string;
+  isPrerendered: boolean;
+  csp: string | undefined;
 }
 
 export interface MockAPIContext {
@@ -32,10 +48,30 @@ export const createMockAPIContext = (overrides: Partial<MockAPIRouteContext> = {
     request: new Request(defaultUrl),
     locals: {
       user: { id: "test-user-id" } as User,
-      supabase: createMockSupabaseClient() as any,
+      supabase: createMockSupabaseClient() as MockSupabaseClient,
+      session: null,
     },
     params: {},
     url: defaultUrl,
+    site: new URL("http://localhost:4321"),
+    generator: "Astro v5.0.0",
+    props: {},
+    redirect: vi.fn(
+      (path: string, status?: number) => new Response(null, { status: status || 302, headers: { Location: path } })
+    ),
+    rewrite: vi.fn().mockResolvedValue(new Response("Rewritten", { status: 200 })),
+    preferredLocale: null,
+    preferredLocaleList: [],
+    currentLocale: "en",
+    clientAddress: "127.0.0.1",
+    getActionResult: vi.fn(() => null),
+    callAction: vi.fn(),
+    getClientAddress: vi.fn(() => "127.0.0.1"),
+    routePattern: "/api/transactions",
+    cookies: {},
+    originPathname: "/api/transactions",
+    isPrerendered: false,
+    csp: undefined,
     ...overrides,
   };
 };
@@ -51,7 +87,7 @@ export const createMockCategoriesAPIContext = (overrides: Partial<MockAPIContext
     request: new Request(defaultUrl),
     locals: {
       user: { id: "test-user-id" } as User,
-      supabase: createMockSupabaseClient() as any,
+      supabase: createMockSupabaseClient() as MockSupabaseClient,
     },
     ...overrides,
   };
@@ -64,7 +100,7 @@ export const createMockAuthenticatedContext = (userId = "test-user-id"): MockAPI
   return createMockAPIContext({
     locals: {
       user: { id: userId } as User,
-      supabase: createMockSupabaseClient() as any,
+      supabase: createMockSupabaseClient() as MockSupabaseClient,
     },
   });
 };
@@ -76,7 +112,7 @@ export const createMockUnauthenticatedContext = (): MockAPIRouteContext => {
   return createMockAPIContext({
     locals: {
       user: null,
-      supabase: createMockSupabaseClient() as any,
+      supabase: createMockSupabaseClient() as MockSupabaseClient,
     },
   });
 };
@@ -84,7 +120,7 @@ export const createMockUnauthenticatedContext = (): MockAPIRouteContext => {
 /**
  * Creates a mock request with JSON body
  */
-export const createMockJSONRequest = (body: any, url = "http://localhost:4321/api/test"): Request => {
+export const createMockJSONRequest = (body: unknown, url = "http://localhost:4321/api/test"): Request => {
   return new Request(url, {
     method: "POST",
     headers: {
@@ -101,7 +137,7 @@ export const createMockAuthenticatedCategoriesContext = (userId = "test-user-id"
   return createMockCategoriesAPIContext({
     locals: {
       user: { id: userId } as User,
-      supabase: createMockSupabaseClient() as any,
+      supabase: createMockSupabaseClient() as MockSupabaseClient,
     },
   });
 };
@@ -113,7 +149,7 @@ export const createMockUnauthenticatedCategoriesContext = (): MockAPIContext => 
   return createMockCategoriesAPIContext({
     locals: {
       user: null,
-      supabase: createMockSupabaseClient() as any,
+      supabase: createMockSupabaseClient() as MockSupabaseClient,
     },
   });
 };
@@ -132,7 +168,7 @@ export const createMockCategoriesContextWithQuery = (params: Record<string, stri
     request: new Request(url),
     locals: {
       user: { id: "test-user-id" } as User,
-      supabase: createMockSupabaseClient() as any,
+      supabase: createMockSupabaseClient() as MockSupabaseClient,
     },
   });
 };
