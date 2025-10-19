@@ -55,7 +55,6 @@ test.describe("Accounts Management", () => {
     expect(currencyInList).toBe("USD");
   });
 
-  /*
   test("should display empty state when no accounts exist", async () => {
     // This test would need to be run with a clean database or mock API
     // For demonstration purposes, we'll just check the structure exists
@@ -71,7 +70,7 @@ test.describe("Accounts Management", () => {
     expect(hasEmptyMessage || hasTable).toBe(true);
     expect(hasEmptyMessage && hasTable).toBe(false);
   });
-
+  /*
   test("should create and delete an account", async ({ page }) => {
     // Navigate to accounts page
     await accountsPage.goto();
