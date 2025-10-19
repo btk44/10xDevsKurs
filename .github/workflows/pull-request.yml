@@ -55,10 +55,47 @@ jobs:
           path: coverage/
           retention-days: 4
 
+  e2e-test:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    environment: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_TEST_USER_ID: ${{ secrets.E2E_TEST_USER_ID }}
+
+      - name: Upload e2e test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-tests-coverage
+          path: playwright-report/
+          retention-days: 4
+
   status-comment:
     name: Status Comment
     runs-on: ubuntu-latest
-    needs: [lint, unit-test]
+    needs: [lint, unit-test, e2e-test]
     if: always()
     steps:
       - name: Checkout code
@@ -76,7 +113,7 @@ jobs:
             });
 
             const jobs = checks.check_runs.filter(check =>
-              ['Lint Code', 'Unit Tests'].includes(check.name)
+              ['Lint Code', 'Unit Tests', 'E2E Tests'].includes(check.name)
             );
 
             const allPassed = jobs.every(job => job.conclusion === 'success');
