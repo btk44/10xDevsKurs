@@ -57,7 +57,7 @@ test.describe("Accounts Management", () => {
 
   test("should display empty state when no accounts exist", async () => {
     // This test would need to be run with a clean database or mock API
-    // For demonstration purposes, we'll just check the structure exists
+    // For demonstration purposes, we'll just check the structure exists.
     await accountsPage.goto();
     await accountsPage.page.waitForLoadState("networkidle");
     // If accounts exist, the empty message won't be visible
