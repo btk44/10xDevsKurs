@@ -1,10 +1,9 @@
-/*
 import { test, expect } from "@playwright/test";
 import {
   TransactionsPage,
   TransactionForm,
   TransactionTable,
-  DeleteTransactionDialog,
+  //DeleteTransactionDialog,
   AccountsPage,
   AccountForm,
   CategoriesPage,
@@ -15,7 +14,7 @@ test.describe("Transactions Management", () => {
   let transactionsPage: TransactionsPage;
   let transactionForm: TransactionForm;
   let transactionTable: TransactionTable;
-  let deleteModal: DeleteTransactionDialog;
+  //let deleteModal: DeleteTransactionDialog;
   let accountsPage: AccountsPage;
   let accountForm: AccountForm;
   let categoriesPage: CategoriesPage;
@@ -25,7 +24,7 @@ test.describe("Transactions Management", () => {
     transactionsPage = new TransactionsPage(page);
     transactionForm = new TransactionForm(page);
     transactionTable = new TransactionTable(page);
-    deleteModal = new DeleteTransactionDialog(page);
+    //deleteModal = new DeleteTransactionDialog(page);
     accountsPage = new AccountsPage(page);
     accountForm = new AccountForm(page);
     categoriesPage = new CategoriesPage(page);
@@ -134,7 +133,7 @@ test.describe("Transactions Management", () => {
     expect(hasEmptyMessage || hasTable).toBe(true);
     expect(hasEmptyMessage && hasTable).toBe(false);
   });
-
+  /*
   test("should create and delete a transaction", async ({ page }) => {
     // Navigate to transactions page
     await transactionsPage.goto();
@@ -289,7 +288,7 @@ test.describe("Transactions Management", () => {
     const finalCount = await transactionTable.getTransactionCount();
     expect(finalCount).toBe(initialCount + 1);
   });
-
+  
   test("should edit a transaction", async ({ page }) => {
     // Navigate to transactions page
     await transactionsPage.goto();
@@ -364,5 +363,5 @@ test.describe("Transactions Management", () => {
     const finalCount = await transactionTable.getTransactionCount();
     expect(finalCount).toBe(initialCount + 1);
   });
+  */
 });
-*/
