@@ -1,17 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { CategoriesPage, CategoryForm, CategoryList /*, DeleteCategoryDialog */ } from "./index";
+import { CategoriesPage, CategoryForm, CategoryList, DeleteCategoryDialog } from "./index";
 
 test.describe("Categories Management", () => {
   let categoriesPage: CategoriesPage;
   let categoryForm: CategoryForm;
   let categoryList: CategoryList;
-  //let deleteModal: DeleteCategoryDialog;
+  let deleteModal: DeleteCategoryDialog;
 
   test.beforeEach(async ({ page }) => {
     categoriesPage = new CategoriesPage(page);
     categoryForm = new CategoryForm(page);
     categoryList = new CategoryList(page);
-    //deleteModal = new DeleteCategoryDialog(page);
+    deleteModal = new DeleteCategoryDialog(page);
 
     // Login first
     //await loginPage.goto();
@@ -88,7 +88,7 @@ test.describe("Categories Management", () => {
     await expect(categoriesPage.expenseTab).toHaveAttribute("data-state", "active");
     await expect(categoriesPage.incomeTab).not.toHaveAttribute("data-state", "active");
   });
-  /*
+
   test("should create and delete a category", async ({ page }) => {
     // Navigate to categories page
     await categoriesPage.goto();
@@ -194,5 +194,4 @@ test.describe("Categories Management", () => {
     const finalCount = await categoryList.getCategoryCount();
     expect(finalCount).toBe(initialCount + 1);
   });
-  */
 });

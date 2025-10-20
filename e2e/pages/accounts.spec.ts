@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { AccountsPage, AccountForm /*, DeleteAccountDialog */ } from "./index";
+import { AccountsPage, AccountForm, DeleteAccountDialog } from "./index";
 
 test.describe("Accounts Management", () => {
   let accountsPage: AccountsPage;
   let accountForm: AccountForm;
-  //let deleteModal: DeleteAccountDialog;
+  let deleteModal: DeleteAccountDialog;
 
   test.beforeEach(async ({ page }) => {
     accountsPage = new AccountsPage(page);
     accountForm = new AccountForm(page);
-    //deleteModal = new DeleteAccountDialog(page);
+    deleteModal = new DeleteAccountDialog(page);
 
     // Login first
     //await loginPage.goto();
@@ -70,7 +70,7 @@ test.describe("Accounts Management", () => {
     expect(hasEmptyMessage || hasTable).toBe(true);
     expect(hasEmptyMessage && hasTable).toBe(false);
   });
-  /*
+
   test("should create and delete an account", async ({ page }) => {
     // Navigate to accounts page
     await accountsPage.goto();
@@ -176,5 +176,4 @@ test.describe("Accounts Management", () => {
     const finalCount = await accountsPage.getAccountCount();
     expect(finalCount).toBe(initialCount + 1);
   });
-  */
 });
