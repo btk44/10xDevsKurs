@@ -1,4 +1,3 @@
-/*
 import { test, expect } from "@playwright/test";
 import { AccountsPage, AccountForm, DeleteAccountDialog } from "./index";
 
@@ -178,4 +177,3 @@ test.describe("Accounts Management", () => {
     expect(finalCount).toBe(initialCount + 1);
   });
 });
-*/
