@@ -34,28 +34,10 @@ export class TransactionForm {
   }
 
   async selectAccount(accountName: string): Promise<void> {
-    // Wait for the account select to be visible and have options
-    await this.accountSelect.waitFor({ state: "visible" });
-
-    // Wait for at least one account option to be available (not just the default "Select Account" option)
-    await this.page.waitForFunction((selectId) => {
-      const select = document.querySelector(`[data-testid="${selectId}"]`) as HTMLSelectElement;
-      return select && select.options.length > 1; // More than just the default option
-    }, "transaction-account-select");
-
     await this.accountSelect.selectOption({ label: accountName });
   }
 
   async selectCategory(categoryName: string): Promise<void> {
-    // Wait for the category select to be visible and have options
-    await this.categorySelect.waitFor({ state: "visible" });
-
-    // Wait for at least one category option to be available (not just the default "Select Category" option)
-    await this.page.waitForFunction((selectId) => {
-      const select = document.querySelector(`[data-testid="${selectId}"]`) as HTMLSelectElement;
-      return select && select.options.length > 1; // More than just the default option
-    }, "transaction-category-select");
-
     await this.categorySelect.selectOption({ label: categoryName });
   }
 
