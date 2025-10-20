@@ -1,4 +1,3 @@
-/*
 import { test, expect } from "@playwright/test";
 import {
   TransactionsPage,
@@ -21,6 +20,11 @@ test.describe("Transactions Management", () => {
   let categoriesPage: CategoriesPage;
   let categoryForm: CategoryForm;
 
+  // Test data variables
+  let testAccountName: string;
+  let testExpenseCategoryName: string;
+  let testIncomeCategoryName: string;
+
   test.beforeEach(async ({ page }) => {
     transactionsPage = new TransactionsPage(page);
     transactionForm = new TransactionForm(page);
@@ -40,11 +44,9 @@ test.describe("Transactions Management", () => {
     await accountsPage.page.waitForLoadState("networkidle");
     await accountsPage.waitForAccountsToLoad();
 
-    const testAccountName = "Test Account";
-    if (!(await accountsPage.isAccountVisible(testAccountName))) {
-      await accountForm.createAccount(testAccountName, "USD - US Dollar", "TEST");
-      await page.waitForTimeout(1000);
-    }
+    testAccountName = `Test Account ${Date.now()}`;
+    await accountForm.createAccount(testAccountName, "USD - US Dollar", "TEST");
+    await page.waitForTimeout(1000);
 
     // Create test expense category if it doesn't exist
     await categoriesPage.goto();
@@ -52,27 +54,18 @@ test.describe("Transactions Management", () => {
     await categoriesPage.switchToExpenseTab();
     await categoriesPage.waitForCategoriesToLoad();
 
-    // Note: We don't have a direct way to check if category exists, so we'll create it
-    // This will fail gracefully if it already exists due to unique constraints
-    try {
-      await categoryForm.createCategory("Food", "FOOD");
-      await page.waitForTimeout(500);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // Category might already exist, continue
-    }
+    // Create unique test expense category
+    testExpenseCategoryName = `Food ${Date.now()}`;
+    await categoryForm.createCategory(testExpenseCategoryName, "FOOD");
+    await page.waitForTimeout(500);
 
-    // Create test income category if it doesn't exist
+    // Create unique test income category
     await categoriesPage.switchToIncomeTab();
     await categoriesPage.waitForCategoriesToLoad();
 
-    try {
-      await categoryForm.createCategory("Salary", "SALARY");
-      await page.waitForTimeout(500);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // Category might already exist, continue
-    }
+    testIncomeCategoryName = `Salary ${Date.now()}`;
+    await categoryForm.createCategory(testIncomeCategoryName, "SALARY");
+    await page.waitForTimeout(500);
   });
 
   test("should perform full transaction flow: create, edit, cancel delete, then delete", async ({ page }) => {
@@ -93,12 +86,13 @@ test.describe("Transactions Management", () => {
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
     const transactionData = {
       date: today,
-      account: "Test Account", // Created in beforeEach
-      category: "Food", // Created in beforeEach
+      account: testAccountName, // Created in beforeEach
+      category: testExpenseCategoryName, // Created in beforeEach
       amount: "50.00",
       comment: `Full flow test transaction ${Date.now()}`,
     };
 
+    await page.waitForLoadState("networkidle");
     await transactionForm.createTransaction(transactionData);
 
     // Wait for the transaction to appear in the list
@@ -135,8 +129,8 @@ test.describe("Transactions Management", () => {
     // Update the transaction
     const updatedData = {
       date: today,
-      account: "Test Account",
-      category: "Food",
+      account: testAccountName,
+      category: testExpenseCategoryName,
       amount: "75.00", // Changed amount
       comment: `${transactionData.comment} - edited`,
     };
@@ -227,4 +221,3 @@ test.describe("Transactions Management", () => {
     await expect(deleteModal.isModalVisible()).resolves.toBe(false);
   });
 });
-*/
