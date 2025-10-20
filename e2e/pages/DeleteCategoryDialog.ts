@@ -11,14 +11,20 @@ export class DeleteCategoryDialog {
   constructor(page: Page) {
     this.page = page;
     this.modal = page.getByTestId("delete-category-modal");
-    this.title = this.modal.locator("h2");
-    this.description = this.modal.locator("p").first();
-    this.cancelButton = page.getByTestId("delete-modal-cancel");
-    this.confirmButton = page.getByTestId("delete-modal-confirm");
+    this.title = page.getByTestId("delete-category-modal-title");
+    this.description = page.getByTestId("delete-category-modal-description");
+    this.cancelButton = page.getByTestId("delete-category-modal-cancel");
+    this.confirmButton = page.getByTestId("delete-category-modal-confirm");
   }
 
   async isModalVisible(): Promise<boolean> {
-    return await this.modal.isVisible();
+    // Check if the modal cancel button is visible, which indicates the modal is open
+    try {
+      await this.cancelButton.waitFor({ state: "visible", timeout: 2000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async getTitle(): Promise<string | null> {
