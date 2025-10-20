@@ -20,11 +20,6 @@ test.describe("Transactions Management", () => {
   let categoriesPage: CategoriesPage;
   let categoryForm: CategoryForm;
 
-  // Test data variables
-  let testAccountName: string;
-  let testExpenseCategoryName: string;
-  let testIncomeCategoryName: string;
-
   test.beforeEach(async ({ page }) => {
     transactionsPage = new TransactionsPage(page);
     transactionForm = new TransactionForm(page);
@@ -38,37 +33,28 @@ test.describe("Transactions Management", () => {
     // Login first
     //await loginPage.goto();
     //await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+  });
 
-    // Create test account if it doesn't exist
+  test("should perform full transaction flow: create, edit, cancel delete, then delete", async ({ page }) => {
+    // Create unique test data for this test
+    const testAccountName = `Transaction Test Account ${Date.now()}`;
+    const testExpenseCategoryName = `Transaction Food ${Date.now()}`;
+
+    // Create test account
     await accountsPage.goto();
     await accountsPage.page.waitForLoadState("networkidle");
     await accountsPage.waitForAccountsToLoad();
-
-    testAccountName = `Test Account ${Date.now()}`;
     await accountForm.createAccount(testAccountName, "USD - US Dollar", "TEST");
     await page.waitForTimeout(1000);
 
-    // Create test expense category if it doesn't exist
+    // Create test expense category
     await categoriesPage.goto();
     await categoriesPage.page.waitForLoadState("networkidle");
     await categoriesPage.switchToExpenseTab();
     await categoriesPage.waitForCategoriesToLoad();
-
-    // Create unique test expense category
-    testExpenseCategoryName = `Food ${Date.now()}`;
     await categoryForm.createCategory(testExpenseCategoryName, "FOOD");
     await page.waitForTimeout(500);
 
-    // Create unique test income category
-    await categoriesPage.switchToIncomeTab();
-    await categoriesPage.waitForCategoriesToLoad();
-
-    testIncomeCategoryName = `Salary ${Date.now()}`;
-    await categoryForm.createCategory(testIncomeCategoryName, "SALARY");
-    await page.waitForTimeout(500);
-  });
-
-  test("should perform full transaction flow: create, edit, cancel delete, then delete", async ({ page }) => {
     // Navigate to transactions page
     await transactionsPage.goto();
     await transactionsPage.page.waitForLoadState("networkidle");
@@ -86,8 +72,8 @@ test.describe("Transactions Management", () => {
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
     const transactionData = {
       date: today,
-      account: testAccountName, // Created in beforeEach
-      category: testExpenseCategoryName, // Created in beforeEach
+      account: testAccountName,
+      category: testExpenseCategoryName,
       amount: "50.00",
       comment: `Full flow test transaction ${Date.now()}`,
     };
