@@ -12,15 +12,21 @@ export class DeleteAccountDialog {
   constructor(page: Page) {
     this.page = page;
     this.modal = page.getByTestId("delete-account-modal");
-    this.title = page.getByTestId("delete-modal-title");
-    this.description = page.getByTestId("delete-modal-description");
-    this.body = page.getByTestId("delete-modal-body");
-    this.cancelButton = page.getByTestId("delete-modal-cancel");
-    this.confirmButton = page.getByTestId("delete-modal-confirm");
+    this.title = page.getByTestId("delete-account-modal-title");
+    this.description = page.getByTestId("delete-account-modal-description");
+    this.body = page.getByTestId("delete-account-modal-body");
+    this.cancelButton = page.getByTestId("delete-account-modal-cancel");
+    this.confirmButton = page.getByTestId("delete-account-modal-confirm");
   }
 
   async isModalVisible(): Promise<boolean> {
-    return await this.modal.isVisible();
+    // Check if the modal cancel button is visible, which indicates the modal is open
+    try {
+      await this.cancelButton.waitFor({ state: "visible", timeout: 2000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async getTitle(): Promise<string | null> {

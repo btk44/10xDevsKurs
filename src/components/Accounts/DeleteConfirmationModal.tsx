@@ -23,13 +23,13 @@ export default function DeleteConfirmationModal({
     <Dialog open={true} onOpenChange={onClose} data-testid="delete-account-modal">
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle data-testid="delete-modal-title">Delete Account</DialogTitle>
-          <DialogDescription data-testid="delete-modal-description">
+          <DialogTitle data-testid="delete-account-modal-title">Delete Account</DialogTitle>
+          <DialogDescription data-testid="delete-account-modal-description">
             Are you sure you want to delete the account &quot;{account.name}&quot;?
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4" data-testid="delete-modal-body">
+        <div className="py-4" data-testid="delete-account-modal-body">
           <p className="text-sm text-gray-500">
             This will soft-delete the account. The account will be hidden from views but its data will be preserved. Any
             transactions associated with this account will remain in the database.
@@ -42,7 +42,7 @@ export default function DeleteConfirmationModal({
             variant="outline"
             onClick={onClose}
             disabled={isDeleting}
-            data-testid="delete-modal-cancel"
+            data-testid="delete-account-modal-cancel"
           >
             Cancel
           </Button>
@@ -51,7 +51,7 @@ export default function DeleteConfirmationModal({
             variant="destructive"
             onClick={handleConfirm}
             disabled={isDeleting}
-            data-testid="delete-modal-confirm"
+            data-testid="delete-account-modal-confirm"
           >
             {isDeleting ? "Deleting..." : "Delete Account"}
           </Button>

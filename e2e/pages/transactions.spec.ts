@@ -75,7 +75,7 @@ test.describe("Transactions Management", () => {
     }
   });
 
-  test("should create a new transaction and verify it appears in the list", async ({ page }) => {
+  test("should perform full transaction flow: create, edit, cancel delete, then delete", async ({ page }) => {
     // Navigate to transactions page
     await transactionsPage.goto();
     await transactionsPage.page.waitForLoadState("networkidle");
@@ -89,14 +89,14 @@ test.describe("Transactions Management", () => {
     // Get initial transaction count
     const initialCount = await transactionTable.getTransactionCount();
 
-    // Fill the transaction form
+    // Step 1: Create a new transaction and verify it appears in the list
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
     const transactionData = {
       date: today,
       account: "Test Account", // Created in beforeEach
       category: "Food", // Created in beforeEach
       amount: "50.00",
-      comment: `Test transaction ${Date.now()}`,
+      comment: `Full flow test transaction ${Date.now()}`,
     };
 
     await transactionForm.createTransaction(transactionData);
@@ -115,71 +115,9 @@ test.describe("Transactions Management", () => {
     ).toBe(true);
 
     // Verify the transaction count increased
-    const finalCount = await transactionTable.getTransactionCount();
-    expect(finalCount).toBe(initialCount + 1);
-  });
-
-  test("should display empty state when no transactions exist", async () => {
-    // This test would need to be run with a clean database or mock API
-    // For demonstration purposes, we'll just check the structure exists
-    await transactionsPage.goto();
-    await transactionsPage.page.waitForLoadState("networkidle");
-
-    // If transactions exist, the empty message won't be visible
-    // If no transactions exist, the empty message should be visible
-    const hasEmptyMessage = await transactionsPage.isEmpty();
-    const hasTable = await transactionTable.isVisible();
-
-    // Either empty message or table should be visible (not both)
-    expect(hasEmptyMessage || hasTable).toBe(true);
-    expect(hasEmptyMessage && hasTable).toBe(false);
-  });
-
-  test("should create and delete a transaction", async ({ page }) => {
-    // Navigate to transactions page
-    await transactionsPage.goto();
-    await transactionsPage.page.waitForLoadState("networkidle");
-
-    // Verify transactions page is loaded
-    await expect(transactionsPage.container).toBeVisible();
-
-    // Wait for transactions to load
-    await transactionsPage.waitForLoadingToDisappear();
-
-    // Get initial transaction count
-    const initialCount = await transactionTable.getTransactionCount();
-
-    // Create a new transaction for testing deletion
-    const today = new Date().toISOString().split("T")[0];
-    const transactionData = {
-      date: today,
-      account: "Test Account",
-      category: "Food",
-      amount: "25.00",
-      comment: `Delete test transaction ${Date.now()}`,
-    };
-
-    await transactionForm.createTransaction(transactionData);
-
-    // Wait for the transaction to appear in the list
-    await page.waitForTimeout(1000);
-    await transactionTable.waitForTransactionToAppear(
-      transactionData.date,
-      transactionData.amount,
-      transactionData.category
-    );
-
-    // Verify the transaction was created
-    expect(
-      await transactionTable.isTransactionVisible(
-        transactionData.date,
-        transactionData.amount,
-        transactionData.category
-      )
-    ).toBe(true);
     expect(await transactionTable.getTransactionCount()).toBe(initialCount + 1);
 
-    // Get the transaction ID for deletion
+    // Step 2: Edit this transaction and verify it is updated
     const transactionId = await transactionTable.getTransactionIdByDetails(
       transactionData.date,
       transactionData.amount,
@@ -187,147 +125,6 @@ test.describe("Transactions Management", () => {
     );
     expect(transactionId).toBeTruthy();
 
-    // Click delete button for the transaction
-    await transactionTable.clickDeleteButton(parseInt(transactionId ?? "0"));
-
-    // Verify the delete confirmation modal appears
-    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
-
-    // Verify modal content
-    const title = await deleteModal.getTitle();
-    expect(title).toContain("Delete");
-
-    const description = await deleteModal.getDescription();
-    expect(description).toContain("transaction");
-
-    // Confirm deletion
-    await deleteModal.confirm();
-
-    // Wait for deletion to complete
-    await page.waitForTimeout(1000);
-
-    // Verify the transaction is no longer in the list
-    expect(
-      await transactionTable.isTransactionVisible(
-        transactionData.date,
-        transactionData.amount,
-        transactionData.category
-      )
-    ).toBe(false);
-
-    // Verify the transaction count decreased
-    const finalCount = await transactionTable.getTransactionCount();
-    expect(finalCount).toBe(initialCount);
-
-    // Verify modal is closed
-    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
-  });
-
-  test("should cancel transaction deletion", async ({ page }) => {
-    // Navigate to transactions page
-    await transactionsPage.goto();
-    await transactionsPage.page.waitForLoadState("networkidle");
-
-    // Verify transactions page is loaded
-    await expect(transactionsPage.container).toBeVisible();
-
-    // Wait for transactions to load
-    await transactionsPage.waitForLoadingToDisappear();
-
-    // Get initial transaction count
-    const initialCount = await transactionTable.getTransactionCount();
-
-    // Create a new transaction for testing cancel deletion
-    const today = new Date().toISOString().split("T")[0];
-    const transactionData = {
-      date: today,
-      account: "Test Account",
-      category: "Food",
-      amount: "15.00",
-      comment: `Cancel delete test transaction ${Date.now()}`,
-    };
-
-    await transactionForm.createTransaction(transactionData);
-
-    // Wait for the transaction to appear
-    await page.waitForTimeout(1000);
-    expect(
-      await transactionTable.isTransactionVisible(
-        transactionData.date,
-        transactionData.amount,
-        transactionData.category
-      )
-    ).toBe(true);
-
-    // Get the transaction ID and click delete
-    const transactionId = await transactionTable.getTransactionIdByDetails(
-      transactionData.date,
-      transactionData.amount,
-      transactionData.category
-    );
-    await transactionTable.clickDeleteButton(parseInt(transactionId ?? "0"));
-
-    // Verify modal appears
-    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
-
-    // Cancel the deletion
-    await deleteModal.cancel();
-
-    // Verify modal is closed
-    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
-
-    // Verify the transaction is still in the list
-    expect(
-      await transactionTable.isTransactionVisible(
-        transactionData.date,
-        transactionData.amount,
-        transactionData.category
-      )
-    ).toBe(true);
-
-    // Verify count hasn't changed
-    const finalCount = await transactionTable.getTransactionCount();
-    expect(finalCount).toBe(initialCount + 1);
-  });
-
-  test("should edit a transaction", async ({ page }) => {
-    // Navigate to transactions page
-    await transactionsPage.goto();
-    await transactionsPage.page.waitForLoadState("networkidle");
-
-    // Verify transactions page is loaded
-    await expect(transactionsPage.container).toBeVisible();
-
-    // Wait for transactions to load
-    await transactionsPage.waitForLoadingToDisappear();
-
-    // Get initial transaction count
-    const initialCount = await transactionTable.getTransactionCount();
-
-    // Create a new transaction for testing editing
-    const today = new Date().toISOString().split("T")[0];
-    const originalData = {
-      date: today,
-      account: "Test Account",
-      category: "Food",
-      amount: "100.00",
-      comment: `Edit test transaction ${Date.now()}`,
-    };
-
-    await transactionForm.createTransaction(originalData);
-
-    // Wait for the transaction to appear
-    await page.waitForTimeout(1000);
-    expect(
-      await transactionTable.isTransactionVisible(originalData.date, originalData.amount, originalData.category)
-    ).toBe(true);
-
-    // Get the transaction ID and click edit
-    const transactionId = await transactionTable.getTransactionIdByDetails(
-      originalData.date,
-      originalData.amount,
-      originalData.category
-    );
     await transactionTable.clickEditButton(parseInt(transactionId ?? "0"));
 
     // Verify form is visible and has the correct data
@@ -340,8 +137,8 @@ test.describe("Transactions Management", () => {
       date: today,
       account: "Test Account",
       category: "Food",
-      amount: "150.00", // Changed amount
-      comment: `${originalData.comment} - edited`,
+      amount: "75.00", // Changed amount
+      comment: `${transactionData.comment} - edited`,
     };
 
     await transactionForm.fillForm(updatedData);
@@ -357,12 +154,77 @@ test.describe("Transactions Management", () => {
 
     // Verify the old transaction is gone
     expect(
-      await transactionTable.isTransactionVisible(originalData.date, originalData.amount, originalData.category)
+      await transactionTable.isTransactionVisible(
+        transactionData.date,
+        transactionData.amount,
+        transactionData.category
+      )
     ).toBe(false);
 
     // Verify count hasn't changed
+    expect(await transactionTable.getTransactionCount()).toBe(initialCount + 1);
+
+    // Step 3: Try to delete it but cancel the deletion
+    const updatedTransactionId = await transactionTable.getTransactionIdByDetails(
+      updatedData.date,
+      updatedData.amount,
+      updatedData.category
+    );
+    await transactionTable.clickDeleteButton(parseInt(updatedTransactionId ?? "0"));
+
+    // Wait for modal to appear
+    await page.waitForTimeout(1000);
+
+    // Verify modal appears
+    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
+
+    // Cancel the deletion
+    await deleteModal.cancel();
+
+    // Verify modal is closed
+    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
+
+    // Verify the transaction is still in the list
+    expect(
+      await transactionTable.isTransactionVisible(updatedData.date, updatedData.amount, updatedData.category)
+    ).toBe(true);
+
+    // Verify count hasn't changed
+    expect(await transactionTable.getTransactionCount()).toBe(initialCount + 1);
+
+    // Step 4: Delete transaction and verify it's removed from the list
+    await transactionTable.clickDeleteButton(parseInt(updatedTransactionId ?? "0"));
+
+    // Wait for modal to appear
+    await page.waitForTimeout(1000);
+
+    // Verify the delete confirmation modal appears
+    await expect(deleteModal.isModalVisible()).resolves.toBe(true);
+
+    // Verify modal content
+    const deleteTitle = await deleteModal.getTitle();
+    expect(deleteTitle).toContain("Delete");
+
+    const description = await deleteModal.getDescription();
+    expect(description).toContain("transaction");
+
+    // Confirm deletion
+    await deleteModal.confirm();
+
+    // Wait for deletion to complete
+    await page.waitForTimeout(1000);
+
+    // Verify the transaction is no longer in the list
+    expect(
+      await transactionTable.isTransactionVisible(updatedData.date, updatedData.amount, updatedData.category)
+    ).toBe(false);
+
+    // Verify the transaction count decreased
     const finalCount = await transactionTable.getTransactionCount();
-    expect(finalCount).toBe(initialCount + 1);
+    expect(finalCount).toBe(initialCount);
+
+    // Verify modal is closed
+    await expect(deleteModal.isModalVisible()).resolves.toBe(false);
   });
 });
 */

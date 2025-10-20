@@ -27,8 +27,8 @@ const DeleteConfirmationModal = ({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent data-testid="delete-category-modal">
         <DialogHeader>
-          <DialogTitle>Delete Category</DialogTitle>
-          <DialogDescription>
+          <DialogTitle data-testid="delete-category-modal-title">Delete Category</DialogTitle>
+          <DialogDescription data-testid="delete-category-modal-description">
             Are you sure you want to delete the category &quot;{category.name}&quot;?
             {category.children.length > 0 && (
               <div className="mt-2 text-amber-600 font-medium">
@@ -38,11 +38,13 @@ const DeleteConfirmationModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        {deleteError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            <p>{deleteError}</p>
-          </div>
-        )}
+        <div className="py-4" data-testid="delete-category-modal-body">
+          {deleteError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              <p>{deleteError}</p>
+            </div>
+          )}
+        </div>
 
         <DialogFooter>
           <Button
@@ -50,7 +52,7 @@ const DeleteConfirmationModal = ({
             variant="outline"
             onClick={onCancel}
             disabled={isDeleting}
-            data-testid="delete-modal-cancel"
+            data-testid="delete-category-modal-cancel"
           >
             Cancel
           </Button>
@@ -59,7 +61,7 @@ const DeleteConfirmationModal = ({
             variant="destructive"
             onClick={onConfirm}
             disabled={isDeleting}
-            data-testid="delete-modal-confirm"
+            data-testid="delete-category-modal-confirm"
           >
             {isDeleting ? "Deleting..." : "Delete Category"}
           </Button>
