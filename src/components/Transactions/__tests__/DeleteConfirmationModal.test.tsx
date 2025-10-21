@@ -31,7 +31,7 @@ const mockIncomeTransaction: TransactionDTO = {
   category_id: 2,
   category_name: "Salary",
   category_type: "income",
-  amount: 3000.00,
+  amount: 3000.0,
   currency_id: 1,
   currency_code: "USD",
   comment: null,
@@ -58,12 +58,7 @@ describe("DeleteConfirmationModal", () => {
 
   describe("Rendering Behavior", () => {
     it("returns null when no transaction is provided", () => {
-      const { container } = render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={null}
-        />
-      );
+      const { container } = render(<DeleteConfirmationModal {...defaultProps} transaction={null} />);
 
       expect(container.firstChild).toBeNull();
     });
@@ -121,12 +116,7 @@ describe("DeleteConfirmationModal", () => {
     });
 
     it("does not display comment section when comment is null", () => {
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={mockTransactionWithoutComment}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} transaction={mockTransactionWithoutComment} />);
 
       expect(screen.queryByText("Comment:")).not.toBeInTheDocument();
     });
@@ -134,12 +124,7 @@ describe("DeleteConfirmationModal", () => {
     it("does not display comment section when comment is empty string", () => {
       const transactionWithEmptyComment = { ...mockExpenseTransaction, comment: "" };
 
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={transactionWithEmptyComment}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} transaction={transactionWithEmptyComment} />);
 
       expect(screen.queryByText("Comment:")).not.toBeInTheDocument();
     });
@@ -154,12 +139,7 @@ describe("DeleteConfirmationModal", () => {
     });
 
     it("formats income amounts with green color", () => {
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={mockIncomeTransaction}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} transaction={mockIncomeTransaction} />);
 
       const amountElement = screen.getByText("3,000.00 USD");
       expect(amountElement).toHaveClass("text-green-600");
@@ -184,7 +164,6 @@ describe("DeleteConfirmationModal", () => {
   });
 
   describe("Props Handling", () => {
-
     it("calls onCancel when cancel button is clicked", () => {
       const onCancel = vi.fn();
       render(<DeleteConfirmationModal {...defaultProps} onCancel={onCancel} />);
@@ -233,35 +212,20 @@ describe("DeleteConfirmationModal", () => {
   describe("Error Handling", () => {
     it("displays string error message", () => {
       const errorMessage = "Failed to delete transaction";
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          deleteError={errorMessage}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} deleteError={errorMessage} />);
 
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
     });
 
     it("displays Error object message", () => {
       const error = new Error("Network error occurred");
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          deleteError={error}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} deleteError={error} />);
 
       expect(screen.getByText("Network error occurred")).toBeInTheDocument();
     });
 
     it("applies correct error styling", () => {
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          deleteError="Some error"
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} deleteError="Some error" />);
 
       const errorContainer = screen.getByText("Some error").closest("div");
       expect(errorContainer).toHaveClass("bg-red-50", "border-red-200", "text-red-700");
@@ -299,48 +263,28 @@ describe("DeleteConfirmationModal", () => {
   describe("Edge Cases", () => {
     it("handles zero amount correctly", () => {
       const zeroAmountTransaction = { ...mockExpenseTransaction, amount: 0 };
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={zeroAmountTransaction}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} transaction={zeroAmountTransaction} />);
 
       expect(screen.getByText("0.00 USD")).toBeInTheDocument();
     });
 
     it("handles negative amounts correctly", () => {
       const negativeAmountTransaction = { ...mockExpenseTransaction, amount: -50.25 };
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={negativeAmountTransaction}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} transaction={negativeAmountTransaction} />);
 
       expect(screen.getByText("-50.25 USD")).toBeInTheDocument();
     });
 
     it("handles very large amounts correctly", () => {
       const largeAmountTransaction = { ...mockExpenseTransaction, amount: 1234567.89 };
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={largeAmountTransaction}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} transaction={largeAmountTransaction} />);
 
       expect(screen.getByText("1,234,567.89 USD")).toBeInTheDocument();
     });
 
     it("handles different currency codes", () => {
       const eurTransaction = { ...mockExpenseTransaction, currency_code: "EUR", amount: 99.99 };
-      render(
-        <DeleteConfirmationModal
-          {...defaultProps}
-          transaction={eurTransaction}
-        />
-      );
+      render(<DeleteConfirmationModal {...defaultProps} transaction={eurTransaction} />);
 
       expect(screen.getByText("99.99 EUR")).toBeInTheDocument();
     });

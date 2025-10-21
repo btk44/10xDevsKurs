@@ -1,16 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "../../../../tests/utils";
+import { render, screen, fireEvent } from "../../../../tests/utils";
 import TransactionsPage from "../TransactionsPage";
-import type {
-  AccountDTO,
-  CategoryDTO,
-  TransactionDTO,
-  GetTransactionsQuery,
-  PaginationDTO,
-  SortOption,
-  CreateTransactionCommand,
-  UpdateTransactionCommand,
-} from "../../../types";
+import type { AccountDTO, CategoryDTO, TransactionDTO, PaginationDTO } from "../../../types";
 
 // Mock the hooks
 vi.mock("../hooks", () => ({

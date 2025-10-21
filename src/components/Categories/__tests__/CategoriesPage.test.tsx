@@ -19,11 +19,7 @@ vi.mock("../CategoriesTabs", () => ({
       >
         Expense
       </button>
-      <button
-        data-testid="tabs-income"
-        onClick={() => onTypeChange("income")}
-        aria-pressed={activeType === "income"}
-      >
+      <button data-testid="tabs-income" onClick={() => onTypeChange("income")} aria-pressed={activeType === "income"}>
         Income
       </button>
     </div>
@@ -50,16 +46,10 @@ vi.mock("../CategoryList", () => ({
           {categories.map((category) => (
             <div key={category.id} data-testid={`category-item-${category.id}`}>
               <span>{category.name}</span>
-              <button
-                data-testid={`edit-category-${category.id}`}
-                onClick={() => onEdit(category)}
-              >
+              <button data-testid={`edit-category-${category.id}`} onClick={() => onEdit(category)}>
                 Edit
               </button>
-              <button
-                data-testid={`delete-category-${category.id}`}
-                onClick={() => onDelete(category)}
-              >
+              <button data-testid={`delete-category-${category.id}`} onClick={() => onDelete(category)}>
                 Delete
               </button>
             </div>
@@ -81,7 +71,7 @@ vi.mock("../CategoryForm", () => ({
     categoryType,
   }: {
     initialData?: CategoryFormData;
-    parentOptions: Array<{ value: number; label: string }>;
+    parentOptions: { value: number; label: string }[];
     onSubmit: (data: CategoryFormData) => void;
     onCancel: () => void;
     isSubmitting: boolean;
