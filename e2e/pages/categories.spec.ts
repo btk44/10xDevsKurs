@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { CategoriesPage, CategoryForm, CategoryList, DeleteCategoryDialog } from "./index";
+import cleanupDatabase from "e2e/db.helper";
 
 test.describe("Categories Management", () => {
   let categoriesPage: CategoriesPage;
@@ -12,10 +13,10 @@ test.describe("Categories Management", () => {
     categoryForm = new CategoryForm(page);
     categoryList = new CategoryList(page);
     deleteModal = new DeleteCategoryDialog(page);
+  });
 
-    // Login first
-    //await loginPage.goto();
-    //await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+  test.afterAll(async () => {
+    await cleanupDatabase();
   });
 
   test("should create a new expense category and verify it appears in the list", async ({ page }) => {

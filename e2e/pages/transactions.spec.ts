@@ -1,4 +1,3 @@
-/*
 import { test, expect } from "@playwright/test";
 import {
   TransactionsPage,
@@ -10,6 +9,7 @@ import {
   CategoriesPage,
   CategoryForm,
 } from "./index";
+import cleanupDatabase from "e2e/db.helper";
 
 test.describe("Transactions Management", () => {
   let transactionsPage: TransactionsPage;
@@ -34,48 +34,32 @@ test.describe("Transactions Management", () => {
     // Login first
     //await loginPage.goto();
     //await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+  });
 
-    // Create test account if it doesn't exist
+  test.afterAll(async () => {
+    await cleanupDatabase();
+  });
+
+  test("should perform full transaction flow: create, edit, cancel delete, then delete", async ({ page }) => {
+    // Create unique test data for this test
+    const testAccountName = `Transaction Test Account ${Date.now()}`;
+    const testExpenseCategoryName = `Transaction Food ${Date.now()}`;
+
+    // Create test account
     await accountsPage.goto();
     await accountsPage.page.waitForLoadState("networkidle");
     await accountsPage.waitForAccountsToLoad();
+    await accountForm.createAccount(testAccountName, "USD - US Dollar", "TEST");
+    await page.waitForTimeout(1000);
 
-    const testAccountName = "Test Account";
-    if (!(await accountsPage.isAccountVisible(testAccountName))) {
-      await accountForm.createAccount(testAccountName, "USD - US Dollar", "TEST");
-      await page.waitForTimeout(1000);
-    }
-
-    // Create test expense category if it doesn't exist
+    // Create test expense category
     await categoriesPage.goto();
     await categoriesPage.page.waitForLoadState("networkidle");
     await categoriesPage.switchToExpenseTab();
     await categoriesPage.waitForCategoriesToLoad();
+    await categoryForm.createCategory(testExpenseCategoryName, "FOOD");
+    await page.waitForTimeout(500);
 
-    // Note: We don't have a direct way to check if category exists, so we'll create it
-    // This will fail gracefully if it already exists due to unique constraints
-    try {
-      await categoryForm.createCategory("Food", "FOOD");
-      await page.waitForTimeout(500);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // Category might already exist, continue
-    }
-
-    // Create test income category if it doesn't exist
-    await categoriesPage.switchToIncomeTab();
-    await categoriesPage.waitForCategoriesToLoad();
-
-    try {
-      await categoryForm.createCategory("Salary", "SALARY");
-      await page.waitForTimeout(500);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      // Category might already exist, continue
-    }
-  });
-
-  test("should perform full transaction flow: create, edit, cancel delete, then delete", async ({ page }) => {
     // Navigate to transactions page
     await transactionsPage.goto();
     await transactionsPage.page.waitForLoadState("networkidle");
@@ -93,12 +77,13 @@ test.describe("Transactions Management", () => {
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
     const transactionData = {
       date: today,
-      account: "Test Account", // Created in beforeEach
-      category: "Food", // Created in beforeEach
+      account: testAccountName,
+      category: testExpenseCategoryName,
       amount: "50.00",
       comment: `Full flow test transaction ${Date.now()}`,
     };
 
+    await page.waitForLoadState("networkidle");
     await transactionForm.createTransaction(transactionData);
 
     // Wait for the transaction to appear in the list
@@ -135,8 +120,8 @@ test.describe("Transactions Management", () => {
     // Update the transaction
     const updatedData = {
       date: today,
-      account: "Test Account",
-      category: "Food",
+      account: testAccountName,
+      category: testExpenseCategoryName,
       amount: "75.00", // Changed amount
       comment: `${transactionData.comment} - edited`,
     };
@@ -227,4 +212,3 @@ test.describe("Transactions Management", () => {
     await expect(deleteModal.isModalVisible()).resolves.toBe(false);
   });
 });
-*/
