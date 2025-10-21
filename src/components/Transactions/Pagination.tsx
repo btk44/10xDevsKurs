@@ -92,7 +92,7 @@ export default function Pagination({ pagination, onPageChange }: PaginationProps
                 key={pageNumber}
                 variant={pageNumber === page ? "default" : "outline"}
                 size="sm"
-                onClick={() => onPageChange(pageNumber as number)}
+                onClick={() => pageNumber !== page && onPageChange(pageNumber as number)}
                 className="min-w-[2rem]"
                 data-testid={`pagination-page-${pageNumber}`}
               >

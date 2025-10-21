@@ -99,13 +99,23 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div data-testid="register-form-container" className="w-full max-w-md mx-auto">
+      <form data-testid="register-form" onSubmit={handleSubmit} className="space-y-4">
         {errors.general && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">{errors.general}</div>
+          <div
+            data-testid="register-general-error"
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+          >
+            {errors.general}
+          </div>
         )}
         {successMessage && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">{successMessage}</div>
+          <div
+            data-testid="register-success-message"
+            className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded"
+          >
+            {successMessage}
+          </div>
         )}
 
         <div>
@@ -113,6 +123,7 @@ export default function RegisterForm() {
             Email
           </label>
           <input
+            data-testid="register-email-input"
             id="email"
             type="email"
             required
@@ -125,7 +136,7 @@ export default function RegisterForm() {
             aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email && (
-            <p id="email-error" className="mt-1 text-sm text-red-600">
+            <p data-testid="register-email-error" id="email-error" className="mt-1 text-sm text-red-600">
               {errors.email}
             </p>
           )}
@@ -136,6 +147,7 @@ export default function RegisterForm() {
             Password
           </label>
           <input
+            data-testid="register-password-input"
             id="password"
             type="password"
             required
@@ -148,7 +160,7 @@ export default function RegisterForm() {
             aria-describedby={errors.password ? "password-error" : undefined}
           />
           {errors.password && (
-            <p id="password-error" className="mt-1 text-sm text-red-600">
+            <p data-testid="register-password-error" id="password-error" className="mt-1 text-sm text-red-600">
               {errors.password}
             </p>
           )}
@@ -162,6 +174,7 @@ export default function RegisterForm() {
             Confirm Password
           </label>
           <input
+            data-testid="register-confirm-password-input"
             id="confirmPassword"
             type="password"
             required
@@ -174,7 +187,11 @@ export default function RegisterForm() {
             aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
           />
           {errors.confirmPassword && (
-            <p id="confirm-password-error" className="mt-1 text-sm text-red-600">
+            <p
+              data-testid="register-confirm-password-error"
+              id="confirm-password-error"
+              className="mt-1 text-sm text-red-600"
+            >
               {errors.confirmPassword}
             </p>
           )}
@@ -182,14 +199,23 @@ export default function RegisterForm() {
 
         <div className="flex items-center justify-end">
           <div className="text-sm">
-            <a href="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <a
+              data-testid="register-login-link"
+              href="/auth/login"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
               Already have an account? Log in
             </a>
           </div>
         </div>
 
         <div>
-          <Button type="submit" disabled={isLoading} className="w-full flex justify-center py-2 px-4">
+          <Button
+            data-testid="register-submit-button"
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-2 px-4"
+          >
             {isLoading ? "Creating account..." : "Register"}
           </Button>
         </div>
