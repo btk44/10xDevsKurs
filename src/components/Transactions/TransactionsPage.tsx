@@ -22,7 +22,7 @@ export default function TransactionsPage() {
   // State for filters, pagination, and sorting
   const [filters, setFilters] = useState<GetTransactionsQuery>({
     page: 1,
-    limit: 10,
+    limit: 5,
     sort: "transaction_date:desc" as SortOption,
     include_inactive: false,
   });
