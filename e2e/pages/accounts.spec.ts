@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { AccountsPage, AccountForm, DeleteAccountDialog } from "./index";
+import cleanupDatabase from "e2e/db.helper";
 
 test.describe("Accounts Management", () => {
   let accountsPage: AccountsPage;
@@ -10,10 +11,10 @@ test.describe("Accounts Management", () => {
     accountsPage = new AccountsPage(page);
     accountForm = new AccountForm(page);
     deleteModal = new DeleteAccountDialog(page);
+  });
 
-    // Login first
-    //await loginPage.goto();
-    //await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+  test.afterAll(async () => {
+    await cleanupDatabase();
   });
 
   test("should create a new account and verify it appears in the list", async ({ page }) => {

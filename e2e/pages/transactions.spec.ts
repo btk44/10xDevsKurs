@@ -9,6 +9,7 @@ import {
   CategoriesPage,
   CategoryForm,
 } from "./index";
+import cleanupDatabase from "e2e/db.helper";
 
 test.describe("Transactions Management", () => {
   let transactionsPage: TransactionsPage;
@@ -33,6 +34,10 @@ test.describe("Transactions Management", () => {
     // Login first
     //await loginPage.goto();
     //await loginPage.login(testUsers.standard.email, testUsers.standard.password);
+  });
+
+  test.afterAll(async () => {
+    await cleanupDatabase();
   });
 
   test("should perform full transaction flow: create, edit, cancel delete, then delete", async ({ page }) => {
