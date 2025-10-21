@@ -198,7 +198,7 @@ describe("TransactionsPage", () => {
 
       expect(mockUseTransactions).toHaveBeenCalledWith({
         page: 1,
-        limit: 10,
+        limit: 5,
         sort: "transaction_date:desc",
         include_inactive: false,
       });
@@ -360,7 +360,7 @@ describe("TransactionsPage", () => {
 
       expect(mockUseTransactions).toHaveBeenCalledWith({
         page: 1,
-        limit: 10,
+        limit: 5,
         sort: "transaction_date:desc",
         include_inactive: false,
       });
