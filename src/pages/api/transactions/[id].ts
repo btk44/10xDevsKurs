@@ -6,15 +6,153 @@ import {
   DeleteTransactionParamsSchema,
 } from "../../../lib/validation/schemas";
 import { formatZodErrors } from "../../../lib/validation/utils";
-import type {
-  UpdateTransactionCommand,
-  ApiResponse,
-  ApiErrorResponse,
-  TransactionDTO,
-  ValidationErrorDetail,
-} from "../../../types";
+import type { UpdateTransactionCommand, ApiErrorResponse, TransactionDTO, ValidationErrorDetail } from "../../../types";
+import type { supabaseClient } from "@/db/supabase.client";
 
 export const prerender = false;
+
+interface User {
+  id: string;
+  email: string;
+}
+
+// Helper functions for common API operations
+function ensureAuthenticated(
+  locals: App.Locals
+): { success: true; user: User } | { success: false; response: Response } {
+  if (!locals.user) {
+    return {
+      success: false,
+      response: TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401),
+    };
+  }
+  return { success: true, user: locals.user };
+}
+
+function createErrorResponse(
+  code: string,
+  message: string,
+  status: number,
+  details?: ValidationErrorDetail[],
+  startTime?: number
+): Response {
+  const errorResponse: ApiErrorResponse = {
+    error: {
+      code,
+      message,
+      ...(details && { details }),
+    },
+  };
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+  };
+
+  if (startTime) {
+    headers["X-Response-Time"] = `${Date.now() - startTime}ms`;
+  }
+
+  return new Response(JSON.stringify(errorResponse), {
+    status,
+    headers,
+  });
+}
+
+function createSuccessResponse<T>(
+  data: T,
+  status = 200,
+  startTime?: number,
+  additionalHeaders?: Record<string, string>,
+  wrapInData = true
+): Response {
+  const response = wrapInData ? { data } : data;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    ...additionalHeaders,
+  };
+
+  if (startTime) {
+    headers["X-Response-Time"] = `${Date.now() - startTime}ms`;
+  }
+
+  return new Response(JSON.stringify(response), {
+    status,
+    headers,
+  });
+}
+
+async function parseJsonRequest(
+  request: Request
+): Promise<{ success: true; data: unknown } | { success: false; response: Response }> {
+  try {
+    // Validate request size to prevent DoS attacks
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) > 10000) {
+      // 10KB limit
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse(
+          "PAYLOAD_TOO_LARGE",
+          "Request payload exceeds maximum allowed size",
+          413
+        ),
+      };
+    }
+
+    const bodyText = await request.text();
+    if (!bodyText.trim()) {
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse("EMPTY_BODY", "Request body cannot be empty", 400),
+      };
+    }
+
+    const data = JSON.parse(bodyText);
+
+    // Additional security: validate request body structure
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse(
+          "INVALID_REQUEST_STRUCTURE",
+          "Request body must be a valid object",
+          400
+        ),
+      };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    if (error instanceof TransactionAPIError) {
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse(error.code, error.message, error.statusCode),
+      };
+    }
+    return {
+      success: false,
+      response: TransactionAPIError.createResponse("INVALID_JSON", "Invalid JSON in request body", 400),
+    };
+  }
+}
+
+function ensureSupabaseClient(
+  locals: App.Locals
+): { success: true; supabase: unknown } | { success: false; response: Response } {
+  if (!locals.supabase) {
+    return {
+      success: false,
+      response: TransactionAPIError.createResponse("SERVICE_UNAVAILABLE", "Database connection not available", 503),
+    };
+  }
+  return { success: true, supabase: locals.supabase };
+}
 
 /**
  * Error factory for creating consistent API error responses
@@ -28,6 +166,29 @@ class TransactionAPIError extends Error {
   ) {
     super(message);
     this.name = "TransactionAPIError";
+  }
+
+  /**
+   * Creates a standardized error response
+   */
+  static createResponse(code: string, message: string, statusCode: number, details?: unknown): Response {
+    const errorResponse = {
+      error: {
+        code,
+        message,
+        details,
+      },
+    };
+
+    return new Response(JSON.stringify(errorResponse), {
+      status: statusCode,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+    });
   }
 }
 
@@ -84,41 +245,100 @@ function mapServiceErrorToAPIError(error: Error): TransactionAPIError {
 
 /**
  * Enhanced logging utility for transaction operations
- * Note: Logging implementation removed for production compliance
  */
 const TransactionLogger = {
   /**
-   * Logs transaction retrieval attempts for monitoring
+   * Logs transaction query attempts with performance metrics
    */
-  logGetAttempt(): void {
-    // In production, this should be sent to a proper logging service
-    // Implementation removed for production compliance
-  },
+  logQueryAttempt(
+    userId: string,
+    query: { id: number },
+    success: boolean,
+    duration: number,
+    error?: string,
+    operation = "GET_TRANSACTION"
+  ): void {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      operation,
+      userId,
+      query,
+      performance: {
+        duration_ms: duration,
+        slow_query: duration > 1000,
+      },
+      result: {
+        success,
+        error: error ? { message: error } : undefined,
+      },
+    };
 
-  /**
-   * Logs transaction update attempts for monitoring
-   */
-  logUpdateAttempt(): void {
-    // In production, this should be sent to a proper logging service
-    // Implementation removed for production compliance
-  },
+    // In production, this should be sent to a proper logging service (e.g., Winston, Pino)
+    if (!success) {
+      console.error("Transaction operation failed:", JSON.stringify(logEntry, null, 2));
+    } else if (duration > 2000) {
+      console.warn("Slow transaction operation:", JSON.stringify(logEntry, null, 2));
+    }
 
-  /**
-   * Logs transaction deletion attempts for monitoring
-   */
-  logDeleteAttempt(): void {
-    // In production, this should be sent to a proper logging service
-    // Implementation removed for production compliance
+    // For now, we'll track successful operations silently
+    // In production: send to monitoring service (DataDog, New Relic, etc.)
   },
 
   /**
    * Logs security-related events for monitoring
    */
-  logSecurityEvent(): void {
+  logSecurityEvent(
+    userId: string,
+    event: string,
+    details: Record<string, unknown>,
+    severity: "low" | "medium" | "high" = "medium"
+  ): void {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      type: "SECURITY_EVENT",
+      userId,
+      event,
+      severity,
+      details,
+    };
+
     // In production, security events should always be logged
-    // Implementation removed for production compliance
+    if (severity === "high") {
+      console.error("High severity security event:", JSON.stringify(logEntry, null, 2));
+    } else {
+      console.warn("Security event:", JSON.stringify(logEntry, null, 2));
+    }
   },
 };
+
+/**
+ * Logs transaction update attempts for monitoring
+ */
+function logTransactionUpdate(
+  userId: string,
+  command: UpdateTransactionCommand,
+  success: boolean,
+  error?: string
+): void {
+  // In production, this should be sent to a proper logging service
+  // For now, we'll just track the attempt without console output
+  if (!success && error) {
+    // Log to error tracking service in production
+    // Could track: userId, command fields, error
+  }
+}
+
+/**
+ * Logs transaction deletion attempts for monitoring
+ */
+function logTransactionDeletion(userId: string, transactionId: number, success: boolean, error?: string): void {
+  // In production, this should be sent to a proper logging service
+  // For now, we'll just track the attempt without console output
+  if (!success && error) {
+    // Log to error tracking service in production
+    // Could track: userId, transactionId, error
+  }
+}
 
 /**
  * GET /api/transactions/:id
@@ -133,11 +353,12 @@ export const GET: APIRoute = async ({ params, locals }) => {
   const startTime = Date.now();
 
   // Ensure user is authenticated
-  if (!locals.user) {
-    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  const authResult = ensureAuthenticated(locals);
+  if (!authResult.success) {
+    return authResult.response;
   }
 
-  const userId = locals.user.id;
+  const userId = authResult.user.id;
   let transactionId: number | null = null;
 
   try {
@@ -151,14 +372,15 @@ export const GET: APIRoute = async ({ params, locals }) => {
     transactionId = idValidation.data;
 
     // Validate supabase client availability
-    const supabase = locals.supabase;
-    if (!supabase) {
+    const supabaseResult = ensureSupabaseClient(locals);
+    if (!supabaseResult.success) {
       throw new TransactionAPIError("SERVICE_UNAVAILABLE", "Database connection not available", 503);
     }
+    const supabase = supabaseResult.supabase as typeof supabaseClient;
 
     // Additional security validations
     if (transactionId <= 0 || transactionId > Number.MAX_SAFE_INTEGER) {
-      TransactionLogger.logSecurityEvent();
+      TransactionLogger.logSecurityEvent(userId, "INVALID_TRANSACTION_ID_RANGE", { transactionId }, "medium");
       throw new TransactionAPIError("INVALID_TRANSACTION_ID", "Transaction ID out of valid range", 400);
     }
 
@@ -177,31 +399,31 @@ export const GET: APIRoute = async ({ params, locals }) => {
       const duration = Date.now() - startTime;
 
       // Log successful retrieval
-      TransactionLogger.logGetAttempt();
+      TransactionLogger.logQueryAttempt(userId, { id: transactionId }, true, duration, undefined, "GET_TRANSACTION");
 
       // Return successful response with security headers
-      return new Response(
-        JSON.stringify({
-          data: transaction,
-        } satisfies ApiResponse<TransactionDTO>),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Response-Time": `${duration}ms`,
-            "X-Content-Type-Options": "nosniff",
-            "X-Frame-Options": "DENY",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-          },
-        }
-      );
+      return createSuccessResponse(transaction satisfies TransactionDTO, 200, startTime);
     } catch (serviceError) {
-      // Map service errors to API errors
-      const apiError = mapServiceErrorToAPIError(serviceError as Error);
+      // Track performance for failed operations
+      const duration = Date.now() - startTime;
 
       // Log failed retrieval
-      TransactionLogger.logGetAttempt();
+      TransactionLogger.logQueryAttempt(
+        userId,
+        { id: transactionId },
+        false,
+        duration,
+        (serviceError as Error).message,
+        "GET_TRANSACTION"
+      );
 
+      // If it's already a TransactionAPIError, re-throw it
+      if (serviceError instanceof TransactionAPIError) {
+        throw serviceError;
+      }
+
+      // Map service errors to API errors
+      const apiError = mapServiceErrorToAPIError(serviceError as Error);
       throw apiError;
     }
   } catch (error) {
@@ -212,43 +434,29 @@ export const GET: APIRoute = async ({ params, locals }) => {
       apiError = error;
     } else {
       // Unexpected error - log for debugging but don't expose internals
-      // Logging removed for production compliance
-      TransactionLogger.logSecurityEvent();
+      console.error("Unexpected error in GET /api/transactions/[id]:", error);
+      TransactionLogger.logSecurityEvent(userId, "UNEXPECTED_ERROR", { error: String(error) }, "high");
       apiError = new TransactionAPIError("INTERNAL_ERROR", "Internal server error", 500);
-    }
-
-    // Log error with context
-    if (transactionId !== null) {
-      TransactionLogger.logGetAttempt();
     }
 
     // Log error details for monitoring
     if (apiError.statusCode >= 500) {
-      TransactionLogger.logSecurityEvent();
+      TransactionLogger.logSecurityEvent(
+        userId,
+        "SERVER_ERROR",
+        {
+          code: apiError.code,
+          message: apiError.message,
+          statusCode: apiError.statusCode,
+          transactionId,
+        },
+        "high"
+      );
     }
 
     // Return error response with security headers
-    const errorDetails = apiError.details as Record<string, unknown> | ValidationErrorDetail[] | undefined;
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: apiError.code,
-        message: apiError.message,
-        details: errorDetails,
-      },
-    };
-
-    const responseHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Response-Time": `${Date.now() - startTime}ms`,
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    };
-
-    return new Response(JSON.stringify(errorResponse), {
-      status: apiError.statusCode,
-      headers: responseHeaders,
-    });
+    const errorDetails = apiError.details as ValidationErrorDetail[] | undefined;
+    return createErrorResponse(apiError.code, apiError.message, apiError.statusCode, errorDetails, startTime);
   }
 };
 
@@ -256,11 +464,12 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
   const startTime = Date.now();
 
   // Ensure user is authenticated
-  if (!locals.user) {
-    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  const authResult = ensureAuthenticated(locals);
+  if (!authResult.success) {
+    return authResult.response;
   }
 
-  const userId = locals.user.id;
+  const userId = authResult.user.id;
   let command: UpdateTransactionCommand | null = null;
   let transactionId: number | null = null;
 
@@ -274,32 +483,12 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
 
     transactionId = idValidation.data;
 
-    // Validate request size to prevent DoS attacks
-    const contentLength = request.headers.get("content-length");
-    if (contentLength && parseInt(contentLength) > 10000) {
-      // 10KB limit
-      throw new TransactionAPIError("PAYLOAD_TOO_LARGE", "Request payload exceeds maximum allowed size", 413);
+    // Parse request body
+    const parseResult = await parseJsonRequest(request);
+    if (!parseResult.success) {
+      return parseResult.response;
     }
-
-    // Parse request body with enhanced error handling
-    let requestBody;
-    try {
-      const bodyText = await request.text();
-      if (!bodyText.trim()) {
-        throw new TransactionAPIError("EMPTY_BODY", "Request body cannot be empty", 400);
-      }
-      requestBody = JSON.parse(bodyText);
-    } catch (jsonError) {
-      if (jsonError instanceof TransactionAPIError) {
-        throw jsonError;
-      }
-      throw new TransactionAPIError("INVALID_JSON", "Invalid JSON in request body", 400);
-    }
-
-    // Additional security: validate request body structure
-    if (typeof requestBody !== "object" || requestBody === null || Array.isArray(requestBody)) {
-      throw new TransactionAPIError("INVALID_REQUEST_STRUCTURE", "Request body must be a valid object", 400);
-    }
+    const requestBody = parseResult.data;
 
     // Check if request body is empty (no fields to update)
     if (Object.keys(requestBody).length === 0) {
@@ -313,17 +502,18 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
       throw new TransactionAPIError("VALIDATION_ERROR", "Validation failed", 400, validationErrors);
     }
 
-    command = validationResult.data;
+    command = validationResult.data as UpdateTransactionCommand;
 
     // Validate supabase client availability
-    const supabase = locals.supabase;
-    if (!supabase) {
+    const supabaseResult = ensureSupabaseClient(locals);
+    if (!supabaseResult.success) {
       throw new TransactionAPIError("SERVICE_UNAVAILABLE", "Database connection not available", 503);
     }
+    const supabase = supabaseResult.supabase as typeof supabaseClient;
 
     // Additional security validations
     if (transactionId <= 0 || transactionId > Number.MAX_SAFE_INTEGER) {
-      TransactionLogger.logSecurityEvent();
+      TransactionLogger.logSecurityEvent(userId, "INVALID_TRANSACTION_ID_RANGE", { transactionId }, "medium");
       throw new TransactionAPIError("INVALID_TRANSACTION_ID", "Transaction ID out of valid range", 400);
     }
 
@@ -333,34 +523,17 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     try {
       const updatedTransaction = await transactionService.updateTransaction(command, transactionId, userId);
 
-      // Track performance
-      const duration = Date.now() - startTime;
-
       // Log successful update
-      TransactionLogger.logUpdateAttempt();
+      logTransactionUpdate(userId, command, true);
 
       // Return successful response with security headers
-      return new Response(
-        JSON.stringify({
-          data: updatedTransaction,
-        } satisfies ApiResponse<TransactionDTO>),
-        {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Response-Time": `${duration}ms`,
-            "X-Content-Type-Options": "nosniff",
-            "X-Frame-Options": "DENY",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-          },
-        }
-      );
+      return createSuccessResponse(updatedTransaction satisfies TransactionDTO, 200, startTime);
     } catch (serviceError) {
       // Map service errors to API errors
       const apiError = mapServiceErrorToAPIError(serviceError as Error);
 
       // Log failed update
-      TransactionLogger.logUpdateAttempt();
+      logTransactionUpdate(userId, command, false, apiError.message);
 
       throw apiError;
     }
@@ -371,44 +544,35 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     if (error instanceof TransactionAPIError) {
       apiError = error;
     } else {
-      // Unexpected error - log for debugging but don't expose internals
-      // Logging removed for production compliance
-      TransactionLogger.logSecurityEvent();
+      // Unexpected error
+      console.error("Unexpected error in PATCH /api/transactions/[id]:", error);
+      TransactionLogger.logSecurityEvent(userId, "UNEXPECTED_ERROR", { error: String(error) }, "high");
       apiError = new TransactionAPIError("INTERNAL_ERROR", "Internal server error", 500);
     }
 
     // Log error with context
-    if (command && transactionId !== null) {
-      TransactionLogger.logUpdateAttempt();
+    if (command) {
+      logTransactionUpdate(userId, command, false, apiError.message);
     }
 
     // Log error details for monitoring
     if (apiError.statusCode >= 500) {
-      TransactionLogger.logSecurityEvent();
+      TransactionLogger.logSecurityEvent(
+        userId,
+        "SERVER_ERROR",
+        {
+          code: apiError.code,
+          message: apiError.message,
+          statusCode: apiError.statusCode,
+          transactionId,
+        },
+        "high"
+      );
     }
 
     // Return error response with security headers
-    const errorDetails = apiError.details as Record<string, unknown> | ValidationErrorDetail[] | undefined;
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: apiError.code,
-        message: apiError.message,
-        details: errorDetails,
-      },
-    };
-
-    const responseHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Response-Time": `${Date.now() - startTime}ms`,
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    };
-
-    return new Response(JSON.stringify(errorResponse), {
-      status: apiError.statusCode,
-      headers: responseHeaders,
-    });
+    const errorDetails = apiError.details as ValidationErrorDetail[] | undefined;
+    return createErrorResponse(apiError.code, apiError.message, apiError.statusCode, errorDetails, startTime);
   }
 };
 
@@ -424,11 +588,12 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
   const startTime = Date.now();
 
   // Ensure user is authenticated
-  if (!locals.user) {
-    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  const authResult = ensureAuthenticated(locals);
+  if (!authResult.success) {
+    return authResult.response;
   }
 
-  const userId = locals.user.id;
+  const userId = authResult.user.id;
   let transactionId: number | null = null;
 
   try {
@@ -447,14 +612,15 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     transactionId = validationResult.data.id;
 
     // Validate supabase client availability
-    const supabase = locals.supabase;
-    if (!supabase) {
+    const supabaseResult = ensureSupabaseClient(locals);
+    if (!supabaseResult.success) {
       throw new TransactionAPIError("SERVICE_UNAVAILABLE", "Database connection not available", 503);
     }
+    const supabase = supabaseResult.supabase as typeof supabaseClient;
 
     // Additional security validations
     if (transactionId <= 0 || transactionId > Number.MAX_SAFE_INTEGER) {
-      TransactionLogger.logSecurityEvent();
+      TransactionLogger.logSecurityEvent(userId, "INVALID_TRANSACTION_ID_RANGE", { transactionId }, "medium");
       throw new TransactionAPIError("INVALID_TRANSACTION_ID", "Transaction ID out of valid range", 400);
     }
 
@@ -462,28 +628,17 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     try {
       await TransactionService.deleteTransaction(transactionId, userId, supabase);
 
-      // Track performance
-      const duration = Date.now() - startTime;
-
       // Log successful deletion
-      TransactionLogger.logDeleteAttempt();
+      logTransactionDeletion(userId, transactionId, true);
 
       // Return 204 No Content on successful deletion
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "X-Response-Time": `${duration}ms`,
-          "X-Content-Type-Options": "nosniff",
-          "X-Frame-Options": "DENY",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-        },
-      });
+      return createSuccessResponse(null, 204, startTime, {}, false);
     } catch (serviceError) {
       // Map service errors to API errors
       const apiError = mapServiceErrorToAPIError(serviceError as Error);
 
       // Log failed deletion
-      TransactionLogger.logDeleteAttempt();
+      logTransactionDeletion(userId, transactionId, false, apiError.message);
 
       throw apiError;
     }
@@ -495,42 +650,33 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       apiError = error;
     } else {
       // Unexpected error - log for debugging but don't expose internals
-      // Logging removed for production compliance
-      TransactionLogger.logSecurityEvent();
+      console.error("Unexpected error in DELETE /api/transactions/[id]:", error);
+      TransactionLogger.logSecurityEvent(userId, "UNEXPECTED_ERROR", { error: String(error) }, "high");
       apiError = new TransactionAPIError("INTERNAL_ERROR", "Internal server error", 500);
     }
 
     // Log error with context
     if (transactionId !== null) {
-      TransactionLogger.logDeleteAttempt();
+      logTransactionDeletion(userId, transactionId, false, apiError.message);
     }
 
     // Log error details for monitoring
     if (apiError.statusCode >= 500) {
-      TransactionLogger.logSecurityEvent();
+      TransactionLogger.logSecurityEvent(
+        userId,
+        "SERVER_ERROR",
+        {
+          code: apiError.code,
+          message: apiError.message,
+          statusCode: apiError.statusCode,
+          transactionId,
+        },
+        "high"
+      );
     }
 
     // Return error response with security headers
-    const errorDetails = apiError.details as Record<string, unknown> | ValidationErrorDetail[] | undefined;
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: apiError.code,
-        message: apiError.message,
-        details: errorDetails,
-      },
-    };
-
-    const responseHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Response-Time": `${Date.now() - startTime}ms`,
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    };
-
-    return new Response(JSON.stringify(errorResponse), {
-      status: apiError.statusCode,
-      headers: responseHeaders,
-    });
+    const errorDetails = apiError.details as ValidationErrorDetail[] | undefined;
+    return createErrorResponse(apiError.code, apiError.message, apiError.statusCode, errorDetails, startTime);
   }
 };

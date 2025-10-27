@@ -5,14 +5,157 @@ import { formatZodErrors } from "../../lib/validation/utils";
 import type {
   CreateTransactionCommand,
   GetTransactionsQuery,
-  ApiResponse,
   ApiCollectionResponse,
   ApiErrorResponse,
   TransactionDTO,
   ValidationErrorDetail,
 } from "../../types";
+import type { supabaseClient } from "@/db/supabase.client";
 
 export const prerender = false;
+
+interface User {
+  id: string;
+  email: string;
+}
+
+// Helper functions for common API operations
+function ensureAuthenticated(
+  locals: App.Locals
+): { success: true; user: User } | { success: false; response: Response } {
+  if (!locals.user) {
+    return {
+      success: false,
+      response: TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401),
+    };
+  }
+  return { success: true, user: locals.user };
+}
+
+function createErrorResponse(
+  code: string,
+  message: string,
+  status: number,
+  details?: ValidationErrorDetail[],
+  startTime?: number
+): Response {
+  const errorResponse: ApiErrorResponse = {
+    error: {
+      code,
+      message,
+      ...(details && { details }),
+    },
+  };
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+  };
+
+  if (startTime) {
+    headers["X-Response-Time"] = `${Date.now() - startTime}ms`;
+  }
+
+  return new Response(JSON.stringify(errorResponse), {
+    status,
+    headers,
+  });
+}
+
+function createSuccessResponse<T>(
+  data: T,
+  status = 200,
+  startTime?: number,
+  additionalHeaders?: Record<string, string>,
+  wrapInData = true
+): Response {
+  const response = wrapInData ? { data } : data;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    ...additionalHeaders,
+  };
+
+  if (startTime) {
+    headers["X-Response-Time"] = `${Date.now() - startTime}ms`;
+  }
+
+  return new Response(JSON.stringify(response), {
+    status,
+    headers,
+  });
+}
+
+async function parseJsonRequest(
+  request: Request
+): Promise<{ success: true; data: unknown } | { success: false; response: Response }> {
+  try {
+    // Validate request size to prevent DoS attacks
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) > 10000) {
+      // 10KB limit
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse(
+          "PAYLOAD_TOO_LARGE",
+          "Request payload exceeds maximum allowed size",
+          413
+        ),
+      };
+    }
+
+    const bodyText = await request.text();
+    if (!bodyText.trim()) {
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse("EMPTY_BODY", "Request body cannot be empty", 400),
+      };
+    }
+
+    const data = JSON.parse(bodyText);
+
+    // Additional security: validate request body structure
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse(
+          "INVALID_REQUEST_STRUCTURE",
+          "Request body must be a valid object",
+          400
+        ),
+      };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    if (error instanceof TransactionAPIError) {
+      return {
+        success: false,
+        response: TransactionAPIError.createResponse(error.code, error.message, error.statusCode),
+      };
+    }
+    return {
+      success: false,
+      response: TransactionAPIError.createResponse("INVALID_JSON", "Invalid JSON in request body", 400),
+    };
+  }
+}
+
+function ensureSupabaseClient(
+  locals: App.Locals
+): { success: true; supabase: unknown } | { success: false; response: Response } {
+  if (!locals.supabase) {
+    return {
+      success: false,
+      response: TransactionAPIError.createResponse("SERVICE_UNAVAILABLE", "Database connection not available", 503),
+    };
+  }
+  return { success: true, supabase: locals.supabase };
+}
 
 /**
  * Error factory for creating consistent API error responses
@@ -205,11 +348,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
 
   // Ensure user is authenticated
-  if (!locals.user) {
-    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  const authResult = ensureAuthenticated(locals);
+  if (!authResult.success) {
+    return authResult.response;
   }
 
-  const userId = locals.user.id;
+  const userId = authResult.user.id;
 
   try {
     // Parse URL query parameters
@@ -230,10 +374,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const query: GetTransactionsQuery = validationResult.data;
 
     // Validate supabase client availability
-    const supabase = locals.supabase;
-    if (!supabase) {
+    const supabaseResult = ensureSupabaseClient(locals);
+    if (!supabaseResult.success) {
       throw new TransactionAPIError("SERVICE_UNAVAILABLE", "Database connection not available", 503);
     }
+    const supabase = supabaseResult.supabase as typeof supabaseClient;
 
     // Enhanced pagination validation
     const page = query.page || 1;
@@ -304,25 +449,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Log the successful query attempt
       TransactionLogger.logQueryAttempt(userId, query, true, duration, undefined, result.data.length);
 
-      // Add performance warnings for slow queries
-      const performanceHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-        "X-Response-Time": `${duration}ms`,
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-      };
-
       // Add performance warning header for slow queries
+      const additionalHeaders: Record<string, string> = {};
       if (duration > 2000) {
-        performanceHeaders["X-Performance-Warning"] = "Query execution time exceeded 2 seconds";
+        additionalHeaders["X-Performance-Warning"] = "Query execution time exceeded 2 seconds";
       }
 
       // Return successful response with enhanced headers
-      return new Response(JSON.stringify(result satisfies ApiCollectionResponse<TransactionDTO>), {
-        status: 200,
-        headers: performanceHeaders,
-      });
+      return createSuccessResponse(
+        result satisfies ApiCollectionResponse<TransactionDTO>,
+        200,
+        startTime,
+        additionalHeaders,
+        false
+      );
     } catch (serviceError) {
       // Log the failed query attempt
       const duration = Date.now() - startTime;
@@ -365,27 +505,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Return error response with security headers
-    const errorDetails = apiError.details as Record<string, unknown> | ValidationErrorDetail[] | undefined;
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: apiError.code,
-        message: apiError.message,
-        details: errorDetails,
-      },
-    };
-
-    const responseHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Response-Time": `${Date.now() - startTime}ms`,
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    };
-
-    return new Response(JSON.stringify(errorResponse), {
-      status: apiError.statusCode,
-      headers: responseHeaders,
-    });
+    const errorDetails = apiError.details as ValidationErrorDetail[] | undefined;
+    return createErrorResponse(apiError.code, apiError.message, apiError.statusCode, errorDetails, startTime);
   }
 };
 
@@ -393,40 +514,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
 
   // Ensure user is authenticated
-  if (!locals.user) {
-    return TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401);
+  const authResult = ensureAuthenticated(locals);
+  if (!authResult.success) {
+    return authResult.response;
   }
 
-  const userId = locals.user.id;
+  const userId = authResult.user.id;
   let command: CreateTransactionCommand | null = null;
 
   try {
-    // Validate request size to prevent DoS attacks
-    const contentLength = request.headers.get("content-length");
-    if (contentLength && parseInt(contentLength) > 10000) {
-      // 10KB limit
-      throw new TransactionAPIError("PAYLOAD_TOO_LARGE", "Request payload exceeds maximum allowed size", 413);
+    // Parse request body
+    const parseResult = await parseJsonRequest(request);
+    if (!parseResult.success) {
+      return parseResult.response;
     }
-
-    // Parse request body with enhanced error handling
-    let requestBody;
-    try {
-      const bodyText = await request.text();
-      if (!bodyText.trim()) {
-        throw new TransactionAPIError("EMPTY_BODY", "Request body cannot be empty", 400);
-      }
-      requestBody = JSON.parse(bodyText);
-    } catch (jsonError) {
-      if (jsonError instanceof TransactionAPIError) {
-        throw jsonError;
-      }
-      throw new TransactionAPIError("INVALID_JSON", "Invalid JSON in request body", 400);
-    }
-
-    // Additional security: validate request body structure
-    if (typeof requestBody !== "object" || requestBody === null || Array.isArray(requestBody)) {
-      throw new TransactionAPIError("INVALID_REQUEST_STRUCTURE", "Request body must be a valid object", 400);
-    }
+    const requestBody = parseResult.data;
 
     // Validate request body against schema with detailed error mapping
     const validationResult = CreateTransactionCommandSchema.safeParse(requestBody);
@@ -435,16 +537,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       throw new TransactionAPIError("VALIDATION_ERROR", "Validation failed", 400, validationErrors);
     }
 
-    command = validationResult.data;
+    command = validationResult.data as CreateTransactionCommand;
 
     // Validate supabase client availability
-    const supabase = locals.supabase;
-    if (!supabase) {
+    const supabaseResult = ensureSupabaseClient(locals);
+    if (!supabaseResult.success) {
       throw new TransactionAPIError("SERVICE_UNAVAILABLE", "Database connection not available", 503);
     }
+    const supabase = supabaseResult.supabase;
 
     // Create transaction service and execute creation with monitoring
-    const transactionService = new TransactionService(supabase);
+    const transactionService = new TransactionService(supabase as typeof supabaseClient);
 
     try {
       const createdTransaction = await transactionService.create(command, userId);
@@ -452,25 +555,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Log successful creation
       logTransactionCreation(userId, command, true);
 
-      // Track performance
-      const duration = Date.now() - startTime;
-
       // Return successful response with security headers
-      return new Response(
-        JSON.stringify({
-          data: createdTransaction,
-        } satisfies ApiResponse<TransactionDTO>),
-        {
-          status: 201,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Response-Time": `${duration}ms`,
-            "X-Content-Type-Options": "nosniff",
-            "X-Frame-Options": "DENY",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-          },
-        }
-      );
+      return createSuccessResponse(createdTransaction satisfies TransactionDTO, 201, startTime);
     } catch (serviceError) {
       // Map service errors to API errors
       const apiError = mapServiceErrorToAPIError(serviceError as Error);
@@ -497,26 +583,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Return error response with security headers
-    const errorDetails = apiError.details as Record<string, unknown> | ValidationErrorDetail[] | undefined;
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: apiError.code,
-        message: apiError.message,
-        details: errorDetails,
-      },
-    };
-
-    const responseHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "X-Response-Time": `${Date.now() - startTime}ms`,
-      "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    };
-
-    return new Response(JSON.stringify(errorResponse), {
-      status: apiError.statusCode,
-      headers: responseHeaders,
-    });
+    const errorDetails = apiError.details as ValidationErrorDetail[] | undefined;
+    return createErrorResponse(apiError.code, apiError.message, apiError.statusCode, errorDetails, startTime);
   }
 };
