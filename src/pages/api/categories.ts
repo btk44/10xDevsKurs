@@ -1,64 +1,11 @@
 import type { APIContext } from "astro";
 import { CategoryService } from "../../lib/services/CategoryService";
 import { CreateCategoryCommandSchema, GetCategoriesQuerySchema } from "../../lib/validation/schemas";
-import type {
-  ApiErrorResponse,
-  ApiCollectionResponse,
-  CategoryDTO,
-  GetCategoriesQuery,
-  ValidationErrorDetail,
-} from "../../types";
+import { ensureAuthenticated } from "../../lib/api/auth";
+import { createErrorResponse, createSuccessResponse, createCollectionSuccessResponse } from "../../lib/api/response";
+import type { ApiErrorResponse, CategoryDTO, GetCategoriesQuery } from "../../types";
 
 export const prerender = false;
-
-// Helper functions for common API operations
-function ensureAuthenticated(locals: App.Locals) {
-  if (!locals.user) {
-    return {
-      success: false,
-      response: createErrorResponse("UNAUTHENTICATED", "Authentication required", 401),
-    } as const;
-  }
-  return { success: true, user: locals.user } as const;
-}
-
-function createErrorResponse(
-  code: string,
-  message: string,
-  status: number,
-  details?: ValidationErrorDetail[]
-): Response {
-  const errorResponse: ApiErrorResponse = {
-    error: {
-      code,
-      message,
-      ...(details && { details }),
-    },
-  };
-  return new Response(JSON.stringify(errorResponse), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function createSuccessResponse<T>(data: T, status = 200): Response {
-  const response = { data };
-  return new Response(JSON.stringify(response), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function createCollectionSuccessResponse<T>(data: T[], status = 200): Response {
-  const response: ApiCollectionResponse<T> = { data };
-  return new Response(JSON.stringify(response), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    },
-  });
-}
 
 /**
  * GET /api/categories - Retrieve categories

@@ -6,339 +6,16 @@ import {
   DeleteTransactionParamsSchema,
 } from "../../../lib/validation/schemas";
 import { formatZodErrors } from "../../../lib/validation/utils";
-import type { UpdateTransactionCommand, ApiErrorResponse, TransactionDTO, ValidationErrorDetail } from "../../../types";
+import { ensureAuthenticated } from "../../../lib/api/auth";
+import { createErrorResponse, createSuccessResponse } from "../../../lib/api/response";
+import { parseJsonRequest } from "../../../lib/api/request";
+import { ensureSupabaseClient } from "../../../lib/api/database";
+import { TransactionAPIError, mapServiceErrorToAPIError } from "../../../lib/api/error-transaction";
+import { TransactionLogger, logTransactionUpdate, logTransactionDeletion } from "../../../lib/api/logging-transaction";
+import type { UpdateTransactionCommand, TransactionDTO, ValidationErrorDetail } from "../../../types";
 import type { supabaseClient } from "@/db/supabase.client";
 
 export const prerender = false;
-
-interface User {
-  id: string;
-  email: string;
-}
-
-// Helper functions for common API operations
-function ensureAuthenticated(
-  locals: App.Locals
-): { success: true; user: User } | { success: false; response: Response } {
-  if (!locals.user) {
-    return {
-      success: false,
-      response: TransactionAPIError.createResponse("UNAUTHENTICATED", "Authentication required", 401),
-    };
-  }
-  return { success: true, user: locals.user };
-}
-
-function createErrorResponse(
-  code: string,
-  message: string,
-  status: number,
-  details?: ValidationErrorDetail[],
-  startTime?: number
-): Response {
-  const errorResponse: ApiErrorResponse = {
-    error: {
-      code,
-      message,
-      ...(details && { details }),
-    },
-  };
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Cache-Control": "no-cache, no-store, must-revalidate",
-  };
-
-  if (startTime) {
-    headers["X-Response-Time"] = `${Date.now() - startTime}ms`;
-  }
-
-  return new Response(JSON.stringify(errorResponse), {
-    status,
-    headers,
-  });
-}
-
-function createSuccessResponse<T>(
-  data: T,
-  status = 200,
-  startTime?: number,
-  additionalHeaders?: Record<string, string>,
-  wrapInData = true
-): Response {
-  const response = wrapInData ? { data } : data;
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Cache-Control": "no-cache, no-store, must-revalidate",
-    ...additionalHeaders,
-  };
-
-  if (startTime) {
-    headers["X-Response-Time"] = `${Date.now() - startTime}ms`;
-  }
-
-  return new Response(JSON.stringify(response), {
-    status,
-    headers,
-  });
-}
-
-async function parseJsonRequest(
-  request: Request
-): Promise<{ success: true; data: unknown } | { success: false; response: Response }> {
-  try {
-    // Validate request size to prevent DoS attacks
-    const contentLength = request.headers.get("content-length");
-    if (contentLength && parseInt(contentLength) > 10000) {
-      // 10KB limit
-      return {
-        success: false,
-        response: TransactionAPIError.createResponse(
-          "PAYLOAD_TOO_LARGE",
-          "Request payload exceeds maximum allowed size",
-          413
-        ),
-      };
-    }
-
-    const bodyText = await request.text();
-    if (!bodyText.trim()) {
-      return {
-        success: false,
-        response: TransactionAPIError.createResponse("EMPTY_BODY", "Request body cannot be empty", 400),
-      };
-    }
-
-    const data = JSON.parse(bodyText);
-
-    // Additional security: validate request body structure
-    if (typeof data !== "object" || data === null || Array.isArray(data)) {
-      return {
-        success: false,
-        response: TransactionAPIError.createResponse(
-          "INVALID_REQUEST_STRUCTURE",
-          "Request body must be a valid object",
-          400
-        ),
-      };
-    }
-
-    return { success: true, data };
-  } catch (error) {
-    if (error instanceof TransactionAPIError) {
-      return {
-        success: false,
-        response: TransactionAPIError.createResponse(error.code, error.message, error.statusCode),
-      };
-    }
-    return {
-      success: false,
-      response: TransactionAPIError.createResponse("INVALID_JSON", "Invalid JSON in request body", 400),
-    };
-  }
-}
-
-function ensureSupabaseClient(
-  locals: App.Locals
-): { success: true; supabase: unknown } | { success: false; response: Response } {
-  if (!locals.supabase) {
-    return {
-      success: false,
-      response: TransactionAPIError.createResponse("SERVICE_UNAVAILABLE", "Database connection not available", 503),
-    };
-  }
-  return { success: true, supabase: locals.supabase };
-}
-
-/**
- * Error factory for creating consistent API error responses
- */
-class TransactionAPIError extends Error {
-  constructor(
-    public code: string,
-    message: string,
-    public statusCode = 500,
-    public details?: unknown
-  ) {
-    super(message);
-    this.name = "TransactionAPIError";
-  }
-
-  /**
-   * Creates a standardized error response
-   */
-  static createResponse(code: string, message: string, statusCode: number, details?: unknown): Response {
-    const errorResponse = {
-      error: {
-        code,
-        message,
-        details,
-      },
-    };
-
-    return new Response(JSON.stringify(errorResponse), {
-      status: statusCode,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-      },
-    });
-  }
-}
-
-/**
- * Maps service errors to appropriate API errors with enhanced context
- */
-function mapServiceErrorToAPIError(error: Error): TransactionAPIError {
-  const message = error.message;
-
-  // Business validation errors (400 Bad Request)
-  if (message.includes("not found") || message.includes("not accessible")) {
-    return new TransactionAPIError("RESOURCE_NOT_FOUND", message, 400);
-  }
-
-  if (message.includes("access denied") || message.includes("Access denied")) {
-    return new TransactionAPIError("ACCESS_DENIED", message, 404); // Return 404 for security
-  }
-
-  if (message.includes("no longer exists")) {
-    return new TransactionAPIError("INVALID_REFERENCE", message, 400);
-  }
-
-  if (message.includes("Invalid transaction data")) {
-    return new TransactionAPIError("DATA_INTEGRITY_ERROR", message, 500);
-  }
-
-  // Database schema errors (500 Internal Server Error)
-  if (message.includes("Database schema error")) {
-    return new TransactionAPIError("DATABASE_SCHEMA_ERROR", "Database configuration error", 500);
-  }
-
-  // Access denied errors (403 Forbidden)
-  if (message.includes("insufficient permissions")) {
-    return new TransactionAPIError("ACCESS_DENIED", "Access denied: insufficient permissions", 403);
-  }
-
-  // Server errors (500 Internal Server Error)
-  if (message.includes("Failed to update transaction") || message.includes("Failed to verify")) {
-    return new TransactionAPIError("DATABASE_ERROR", "Database operation failed", 500);
-  }
-
-  // Delete operation specific errors
-  if (message.includes("Failed to delete transaction")) {
-    return new TransactionAPIError("DATABASE_ERROR", "Database operation failed", 500);
-  }
-
-  if (message.includes("Transaction not found or access denied")) {
-    return new TransactionAPIError("TRANSACTION_NOT_FOUND", "Transaction not found", 404);
-  }
-
-  // Default to internal server error
-  return new TransactionAPIError("INTERNAL_ERROR", "An unexpected error occurred", 500);
-}
-
-/**
- * Enhanced logging utility for transaction operations
- */
-const TransactionLogger = {
-  /**
-   * Logs transaction query attempts with performance metrics
-   */
-  logQueryAttempt(
-    userId: string,
-    query: { id: number },
-    success: boolean,
-    duration: number,
-    error?: string,
-    operation = "GET_TRANSACTION"
-  ): void {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      operation,
-      userId,
-      query,
-      performance: {
-        duration_ms: duration,
-        slow_query: duration > 1000,
-      },
-      result: {
-        success,
-        error: error ? { message: error } : undefined,
-      },
-    };
-
-    // In production, this should be sent to a proper logging service (e.g., Winston, Pino)
-    if (!success) {
-      console.error("Transaction operation failed:", JSON.stringify(logEntry, null, 2));
-    } else if (duration > 2000) {
-      console.warn("Slow transaction operation:", JSON.stringify(logEntry, null, 2));
-    }
-
-    // For now, we'll track successful operations silently
-    // In production: send to monitoring service (DataDog, New Relic, etc.)
-  },
-
-  /**
-   * Logs security-related events for monitoring
-   */
-  logSecurityEvent(
-    userId: string,
-    event: string,
-    details: Record<string, unknown>,
-    severity: "low" | "medium" | "high" = "medium"
-  ): void {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      type: "SECURITY_EVENT",
-      userId,
-      event,
-      severity,
-      details,
-    };
-
-    // In production, security events should always be logged
-    if (severity === "high") {
-      console.error("High severity security event:", JSON.stringify(logEntry, null, 2));
-    } else {
-      console.warn("Security event:", JSON.stringify(logEntry, null, 2));
-    }
-  },
-};
-
-/**
- * Logs transaction update attempts for monitoring
- */
-function logTransactionUpdate(
-  userId: string,
-  command: UpdateTransactionCommand,
-  success: boolean,
-  error?: string
-): void {
-  // In production, this should be sent to a proper logging service
-  // For now, we'll just track the attempt without console output
-  if (!success && error) {
-    // Log to error tracking service in production
-    // Could track: userId, command fields, error
-  }
-}
-
-/**
- * Logs transaction deletion attempts for monitoring
- */
-function logTransactionDeletion(userId: string, transactionId: number, success: boolean, error?: string): void {
-  // In production, this should be sent to a proper logging service
-  // For now, we'll just track the attempt without console output
-  if (!success && error) {
-    // Log to error tracking service in production
-    // Could track: userId, transactionId, error
-  }
-}
 
 /**
  * GET /api/transactions/:id
@@ -399,7 +76,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
       const duration = Date.now() - startTime;
 
       // Log successful retrieval
-      TransactionLogger.logQueryAttempt(userId, { id: transactionId }, true, duration, undefined, "GET_TRANSACTION");
+      TransactionLogger.logQueryAttempt(userId, { id: transactionId }, true, duration, undefined, 1, "GET_TRANSACTION");
 
       // Return successful response with security headers
       return createSuccessResponse(transaction satisfies TransactionDTO, 200, startTime);
@@ -414,6 +91,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
         false,
         duration,
         (serviceError as Error).message,
+        undefined,
         "GET_TRANSACTION"
       );
 
@@ -491,7 +169,12 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     const requestBody = parseResult.data;
 
     // Check if request body is empty (no fields to update)
-    if (Object.keys(requestBody).length === 0) {
+    if (
+      typeof requestBody === "object" &&
+      requestBody !== null &&
+      !Array.isArray(requestBody) &&
+      Object.keys(requestBody).length === 0
+    ) {
       throw new TransactionAPIError("NO_FIELDS_TO_UPDATE", "At least one field must be provided for update", 400);
     }
 

@@ -2,68 +2,12 @@ import type { APIRoute } from "astro";
 import { AccountService } from "../../lib/services/AccountService";
 import { CreateAccountCommandSchema } from "../../lib/validation/schemas";
 import { validateRequestBody } from "../../lib/validation/utils";
-import type { ApiErrorResponse, AccountDTO, ValidationErrorDetail } from "../../types";
+import { ensureAuthenticated } from "../../lib/api/auth";
+import { createErrorResponse, createSuccessResponse } from "../../lib/api/response";
+import { parseJsonRequest } from "../../lib/api/request";
+import type { AccountDTO } from "../../types";
 
 export const prerender = false;
-
-interface User {
-  id: string;
-  email: string;
-}
-
-interface Locals {
-  user?: User | null;
-  supabase: unknown;
-}
-
-// Helper functions for common API operations
-function ensureAuthenticated(locals: Locals): { success: true; user: User } | { success: false; response: Response } {
-  if (!locals.user) {
-    return { success: false, response: createErrorResponse("UNAUTHENTICATED", "Authentication required", 401) };
-  }
-  return { success: true, user: locals.user };
-}
-
-function createErrorResponse(
-  code: string,
-  message: string,
-  status: number,
-  details?: ValidationErrorDetail[]
-): Response {
-  const errorResponse: ApiErrorResponse = {
-    error: {
-      code,
-      message,
-      ...(details && { details }),
-    },
-  };
-  return new Response(JSON.stringify(errorResponse), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function createSuccessResponse<T>(data: T, status = 200): Response {
-  const response = { data };
-  return new Response(JSON.stringify(response), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-async function parseJsonRequest(
-  request: Request
-): Promise<{ success: true; data: unknown } | { success: false; response: Response }> {
-  try {
-    const data = await request.json();
-    return { success: true, data };
-  } catch {
-    return {
-      success: false,
-      response: createErrorResponse("INVALID_JSON", "Request body must be valid JSON", 400),
-    };
-  }
-}
 
 export const GET: APIRoute = async ({ request, locals }) => {
   try {
