@@ -224,7 +224,7 @@ describe("RegisterForm", () => {
       });
     });
 
-    it("redirects to home page on successful registration without email confirmation", async () => {
+    it("shows success message on successful registration", async () => {
       const user = userEvent.setup();
       fetchMock.mockResolvedValueOnce({
         ok: true,
@@ -244,8 +244,12 @@ describe("RegisterForm", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockLocationHref).toHaveBeenCalledWith("/");
+        expect(screen.getByTestId("register-success-message")).toHaveTextContent(
+          "Registration successful! Please check your email to confirm your account."
+        );
       });
+
+      expect(mockLocationHref).not.toHaveBeenCalled();
     });
 
     it("shows success message on registration requiring email confirmation", async () => {
@@ -433,7 +437,9 @@ describe("RegisterForm", () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId("register-general-error")).not.toBeInTheDocument();
-        expect(mockLocationHref).toHaveBeenCalledWith("/");
+        expect(screen.getByTestId("register-success-message")).toHaveTextContent(
+          "Registration successful! Please check your email to confirm your account."
+        );
       });
     });
 
@@ -475,7 +481,9 @@ describe("RegisterForm", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockLocationHref).toHaveBeenCalledWith("/");
+        expect(screen.getByTestId("register-success-message")).toHaveTextContent(
+          "Registration successful! Please check your email to confirm your account."
+        );
       });
     });
   });
