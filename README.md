@@ -93,7 +93,6 @@ In the project directory, you can run:
   - **Categories** (Income vs. Expense)
   - **Transactions** (date, account, category, amount, optional comment)
 - Transaction list with sorting (newest first) and multi-criteria filtering
-- Monthly expense summary per category with navigation controls
 
 ### Out of Scope
 
@@ -103,6 +102,7 @@ In the project directory, you can run:
 - Advanced budgeting/financial planning features
 - Dedicated transfers feature (handled as separate transactions)
 - Automatic currency conversion
+- Monthly expense summary per category with navigation controls
 
 ## Project Status
 
