@@ -309,13 +309,14 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     // Perform soft delete using TransactionService
     try {
-      await TransactionService.deleteTransaction(transactionId, userId, supabase);
+      const transactionService = new TransactionService(supabase);
+      await transactionService.deleteTransaction(transactionId, userId);
 
       // Log successful deletion
       logTransactionDeletion(userId, transactionId, true);
 
       // Return 204 No Content on successful deletion
-      return createSuccessResponse(null, 204, startTime, {}, false);
+      return createSuccessResponse(null, 200, startTime, {}, false);
     } catch (serviceError) {
       // Map service errors to API errors
       const apiError = mapServiceErrorToAPIError(serviceError as Error);
