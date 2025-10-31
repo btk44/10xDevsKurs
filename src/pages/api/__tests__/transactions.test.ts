@@ -282,7 +282,7 @@ describe("GET /api/transactions", () => {
 
       expect(response.status).toBe(400);
       expect(result.body.error.code).toBe("INVALID_JSON");
-      expect(result.body.error.message).toBe("Invalid JSON in request body");
+      expect(result.body.error.message).toBe("Request body must be valid JSON");
     });
 
     it("validates request body structure for POST requests", async () => {

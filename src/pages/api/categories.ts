@@ -1,14 +1,9 @@
 import type { APIContext } from "astro";
 import { CategoryService } from "../../lib/services/CategoryService";
 import { CreateCategoryCommandSchema, GetCategoriesQuerySchema } from "../../lib/validation/schemas";
-import type {
-  ApiResponse,
-  ApiErrorResponse,
-  ApiCollectionResponse,
-  CategoryDTO,
-  CreateCategoryCommand,
-  GetCategoriesQuery,
-} from "../../types";
+import { ensureAuthenticated } from "../../lib/api/auth";
+import { createErrorResponse, createSuccessResponse, createCollectionSuccessResponse } from "../../lib/api/response";
+import type { ApiErrorResponse, CategoryDTO, GetCategoriesQuery } from "../../types";
 
 export const prerender = false;
 
@@ -16,21 +11,11 @@ export const prerender = false;
  * GET /api/categories - Retrieve categories
  * Retrieves all categories belonging to the authenticated user with optional filtering
  */
-export async function GET({ url, locals }: APIContext): Promise<Response> {
+export async function GET({ url, locals }: APIContext & { locals: App.Locals }): Promise<Response> {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
     // Parse query parameters from URL with null safety
     const searchParams = url.searchParams;
@@ -70,17 +55,7 @@ export async function GET({ url, locals }: APIContext): Promise<Response> {
         };
       });
 
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid query parameters provided",
-          details,
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("VALIDATION_ERROR", "Invalid query parameters provided", 400, details);
     }
 
     // Create category service instance
@@ -89,65 +64,27 @@ export async function GET({ url, locals }: APIContext): Promise<Response> {
     // Retrieve categories with filtering
     const categories: CategoryDTO[] = await categoryService.getCategories(
       validation.data as GetCategoriesQuery,
-      locals.user.id
+      authResult.user.id
     );
 
     // Return success response with proper handling of empty results
-    const successResponse: ApiCollectionResponse<CategoryDTO> = {
-      data: categories, // Will be empty array if no categories found
-    };
-
-    return new Response(JSON.stringify(successResponse), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache, no-store, must-revalidate", // Prevent caching for user-specific data
-      },
-    });
+    return createCollectionSuccessResponse(categories); // Will be empty array if no categories found
   } catch (error) {
     // Handle specific service errors
     if (error instanceof Error) {
       // Handle validation errors from service layer
       if (error.message.includes("Valid user ID is required")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "INVALID_USER_ID",
-            message: "Invalid user identification",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("INVALID_USER_ID", "Invalid user identification", 401);
       }
 
       // Handle database connection errors
       if (error.message.includes("Failed to retrieve categories")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "DATABASE_ERROR",
-            message: "Unable to retrieve categories at this time",
-            details: { message: "Database operation failed" },
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("DATABASE_ERROR", "Unable to retrieve categories at this time", 503);
       }
 
       // Handle Supabase-specific errors
       if (error.message.includes("JWT") || error.message.includes("auth")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "AUTHENTICATION_ERROR",
-            message: "Authentication failed",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("AUTHENTICATION_ERROR", "Authentication failed", 401);
       }
     }
 
@@ -172,21 +109,11 @@ export async function GET({ url, locals }: APIContext): Promise<Response> {
  * POST /api/categories - Create a new category
  * Creates a new expense or income category with support for 2-level hierarchical organization
  */
-export async function POST({ request, locals }: APIContext): Promise<Response> {
+export async function POST({ request, locals }: APIContext & { locals: App.Locals }): Promise<Response> {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
     // Parse request body
     const body = await request.json();
@@ -214,100 +141,43 @@ export async function POST({ request, locals }: APIContext): Promise<Response> {
     const categoryService = new CategoryService(locals.supabase);
 
     // Create the category
-    const newCategory: CategoryDTO = await categoryService.createCategory(
-      validation.data as CreateCategoryCommand,
-      locals.user.id
-    );
+    const newCategory: CategoryDTO = await categoryService.createCategory(validation.data, authResult.user.id);
 
     // Return success response
-    const successResponse: ApiResponse<CategoryDTO> = {
-      data: newCategory,
-    };
-
-    return new Response(JSON.stringify(successResponse), {
-      status: 201,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSuccessResponse(newCategory, 201);
   } catch (error) {
     // Handle specific business logic errors
     if (error instanceof Error) {
       if (error.message.includes("Parent category does not exist")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Validation failed",
-            details: [
-              {
-                field: "parent_id",
-                message: "Parent category does not exist or is not active",
-              },
-            ],
+        return createErrorResponse("VALIDATION_ERROR", "Validation failed", 400, [
+          {
+            field: "parent_id",
+            message: "Parent category does not exist or is not active",
           },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        ]);
       }
 
       if (error.message.includes("category with this name already exists")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Validation failed",
-            details: [
-              {
-                field: "name",
-                message: "A category with this name already exists in the same location",
-              },
-            ],
+        return createErrorResponse("VALIDATION_ERROR", "Validation failed", 400, [
+          {
+            field: "name",
+            message: "A category with this name already exists in the same location",
           },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        ]);
       }
 
       if (error.message.includes("Maximum category depth")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "HIERARCHY_ERROR",
-            message: "Maximum category depth is 2 levels",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("HIERARCHY_ERROR", "Maximum category depth is 2 levels", 400);
       }
 
       if (error.message.includes("type must match parent")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "TYPE_MISMATCH_ERROR",
-            message: "Subcategory type must match parent category type",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("TYPE_MISMATCH_ERROR", "Subcategory type must match parent category type", 400);
       }
     }
 
     // Handle unexpected errors
     // TODO: Replace with proper logging service in production
     // console.error("Unexpected error in POST /api/categories:", error);
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
-      },
-    };
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorResponse("INTERNAL_ERROR", "An unexpected error occurred", 500);
   }
 }

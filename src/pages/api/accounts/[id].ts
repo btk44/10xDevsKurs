@@ -2,9 +2,93 @@ import type { APIRoute } from "astro";
 import { AccountService } from "../../../lib/services/AccountService";
 import { UpdateAccountCommandSchema } from "../../../lib/validation/schemas";
 import { validateRequestBody } from "../../../lib/validation/utils";
-import type { ApiResponse, ApiErrorResponse, AccountDTO, UpdateAccountCommand } from "../../../types";
+import type { ApiErrorResponse, AccountDTO, UpdateAccountCommand, ValidationErrorDetail } from "../../../types";
 
 export const prerender = false;
+
+interface User {
+  id: string;
+  email: string;
+}
+
+interface Locals {
+  user?: User | null;
+  supabase: unknown;
+}
+
+// Helper functions for common API operations
+function ensureAuthenticated(locals: Locals): { success: true; user: User } | { success: false; response: Response } {
+  if (!locals.user) {
+    return { success: false, response: createErrorResponse("UNAUTHENTICATED", "Authentication required", 401) };
+  }
+  return { success: true, user: locals.user };
+}
+
+function createErrorResponse(
+  code: string,
+  message: string,
+  status: number,
+  details?: ValidationErrorDetail[]
+): Response {
+  const errorResponse: ApiErrorResponse = {
+    error: {
+      code,
+      message,
+      ...(details && { details }),
+    },
+  };
+  return new Response(JSON.stringify(errorResponse), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function createSuccessResponse<T>(data: T, status = 200): Response {
+  const response = { data };
+  return new Response(JSON.stringify(response), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function parseJsonRequest(
+  request: Request
+): Promise<{ success: true; data: unknown } | { success: false; response: Response }> {
+  try {
+    const data = await request.json();
+    return { success: true, data };
+  } catch {
+    return {
+      success: false,
+      response: createErrorResponse("INVALID_JSON", "Request body must be valid JSON", 400),
+    };
+  }
+}
+
+function validateAccountId(
+  accountIdParam: string | undefined
+): { success: true; accountId: number } | { success: false; response: Response } {
+  if (!accountIdParam) {
+    return { success: false, response: createErrorResponse("INVALID_ACCOUNT_ID", "Account ID is required", 400) };
+  }
+
+  let accountId: number;
+  try {
+    accountId = parseInt(accountIdParam, 10);
+
+    // Validate that it's a positive integer
+    if (isNaN(accountId) || accountId <= 0 || !Number.isInteger(accountId)) {
+      throw new Error("Invalid format");
+    }
+  } catch {
+    return {
+      success: false,
+      response: createErrorResponse("INVALID_ACCOUNT_ID", "Invalid account ID format. Must be a positive integer", 400),
+    };
+  }
+
+  return { success: true, accountId };
+}
 
 /**
  * GET /api/accounts/:id
@@ -18,56 +102,12 @@ export const prerender = false;
 export const GET: APIRoute = async ({ params, locals }) => {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
-    // Extract and validate account ID from path parameters
-    const accountIdParam = params.id;
-
-    if (!accountIdParam) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_ACCOUNT_ID",
-          message: "Account ID is required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Parse and validate account ID as positive integer
-    let accountId: number;
-    try {
-      accountId = parseInt(accountIdParam, 10);
-
-      // Validate that it's a positive integer
-      if (isNaN(accountId) || accountId <= 0 || !Number.isInteger(accountId)) {
-        throw new Error("Invalid format");
-      }
-    } catch {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_ACCOUNT_ID",
-          message: "Invalid account ID format. Must be a positive integer",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // Validate account ID from path parameters
+    const accountIdResult = validateAccountId(params.id);
+    if (!accountIdResult.success) return accountIdResult.response;
 
     // Initialize AccountService with Supabase client from middleware
     const accountService = new AccountService(locals.supabase);
@@ -75,7 +115,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
     // Fetch the account by ID
     let account: AccountDTO | null;
     try {
-      account = await accountService.getAccountById(accountId, locals.user.id);
+      account = await accountService.getAccountById(accountIdResult.accountId, authResult.user.id);
     } catch (error) {
       // Log the error for debugging (in production, use proper logging)
       // console.error("Error retrieving account:", error);
@@ -83,70 +123,27 @@ export const GET: APIRoute = async ({ params, locals }) => {
       if (error instanceof Error) {
         // Check if it's a database-related error
         if (error.message.includes("Failed to retrieve account")) {
-          const errorResponse: ApiErrorResponse = {
-            error: {
-              code: "DATABASE_ERROR",
-              message: "Failed to retrieve account from database",
-            },
-          };
-          return new Response(JSON.stringify(errorResponse), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
+          return createErrorResponse("DATABASE_ERROR", "Failed to retrieve account from database", 500);
         }
       }
 
       // Generic database error
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "DATABASE_ERROR",
-          message: "Internal server error",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("DATABASE_ERROR", "Internal server error", 500);
     }
 
     // Check if account was found
     if (!account) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "ACCOUNT_NOT_FOUND",
-          message: "Account not found",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("ACCOUNT_NOT_FOUND", "Account not found", 404);
     }
 
     // Format successful response
-    const response: ApiResponse<AccountDTO> = {
-      data: account,
-    };
-
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSuccessResponse(account);
   } catch {
     // Log the error for debugging (in production, use proper logging)
     // console.error("Error in GET /api/accounts/:id:", error);
 
     // Generic internal server error
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
-      },
-    };
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorResponse("INTERNAL_ERROR", "An unexpected error occurred", 500);
   }
 };
 
@@ -163,89 +160,23 @@ export const GET: APIRoute = async ({ params, locals }) => {
 export const PATCH: APIRoute = async ({ params, request, locals }) => {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
-    // Extract and validate account ID from path parameters
-    const accountIdParam = params.id;
-
-    if (!accountIdParam) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_ACCOUNT_ID",
-          message: "Account ID is required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Parse and validate account ID as positive integer
-    let accountId: number;
-    try {
-      accountId = parseInt(accountIdParam, 10);
-
-      // Validate that it's a positive integer
-      if (isNaN(accountId) || accountId <= 0 || !Number.isInteger(accountId)) {
-        throw new Error("Invalid format");
-      }
-    } catch {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_ACCOUNT_ID",
-          message: "Invalid account ID format. Must be a positive integer",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // Validate account ID from path parameters
+    const accountIdResult = validateAccountId(params.id);
+    if (!accountIdResult.success) return accountIdResult.response;
 
     // Parse request body
-    let requestBody: unknown;
-    try {
-      requestBody = await request.json();
-    } catch {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_JSON",
-          message: "Request body must be valid JSON",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const parseResult = await parseJsonRequest(request);
+    if (!parseResult.success) return parseResult.response;
+    const requestBody = parseResult.data;
 
     // Validate request body against UpdateAccountCommand schema
     const validation = validateRequestBody(UpdateAccountCommandSchema, requestBody);
 
     if (!validation.success) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Validation failed",
-          details: validation.errors,
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("VALIDATION_ERROR", "Validation failed", 400, validation.errors);
     }
 
     const updateCommand: UpdateAccountCommand = validation.data;
@@ -256,93 +187,40 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     // Update the account
     let updatedAccount: AccountDTO;
     try {
-      updatedAccount = await accountService.updateAccount(accountId, updateCommand, locals.user.id);
+      updatedAccount = await accountService.updateAccount(accountIdResult.accountId, updateCommand, authResult.user.id);
     } catch (error) {
       // Handle specific error cases
       if (error instanceof Error) {
         // Account not found or access denied
         if (error.message.includes("Account not found") || error.message.includes("access denied")) {
-          const errorResponse: ApiErrorResponse = {
-            error: {
-              code: "ACCOUNT_NOT_FOUND",
-              message: "Account not found",
-            },
-          };
-          return new Response(JSON.stringify(errorResponse), {
-            status: 404,
-            headers: { "Content-Type": "application/json" },
-          });
+          return createErrorResponse("ACCOUNT_NOT_FOUND", "Account not found", 404);
         }
 
         // Currency validation error
         if (error.message.includes("CURRENCY_NOT_FOUND")) {
-          const errorResponse: ApiErrorResponse = {
-            error: {
-              code: "CURRENCY_NOT_FOUND",
-              message: "Currency not found",
-              details: [
-                {
-                  field: "currency_id",
-                  message: "The specified currency does not exist",
-                },
-              ],
+          return createErrorResponse("CURRENCY_NOT_FOUND", "Currency not found", 400, [
+            {
+              field: "currency_id",
+              message: "The specified currency does not exist",
             },
-          };
-          return new Response(JSON.stringify(errorResponse), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          });
+          ]);
         }
 
         // Database-related errors
         if (error.message.includes("Failed to update account")) {
-          const errorResponse: ApiErrorResponse = {
-            error: {
-              code: "DATABASE_ERROR",
-              message: "Failed to update account",
-            },
-          };
-          return new Response(JSON.stringify(errorResponse), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
+          return createErrorResponse("DATABASE_ERROR", "Failed to update account", 500);
         }
       }
 
       // Generic database error
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "DATABASE_ERROR",
-          message: "Internal server error",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("DATABASE_ERROR", "Internal server error", 500);
     }
 
     // Format successful response
-    const response: ApiResponse<AccountDTO> = {
-      data: updatedAccount,
-    };
-
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSuccessResponse(updatedAccount);
   } catch {
     // Generic internal server error for any unexpected errors
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
-      },
-    };
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorResponse("INTERNAL_ERROR", "An unexpected error occurred", 500);
   }
 };
 
@@ -359,106 +237,35 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
 export const DELETE: APIRoute = async ({ params, locals }) => {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
-    // Extract and validate account ID from path parameters
-    const accountIdParam = params.id;
-
-    if (!accountIdParam) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_ACCOUNT_ID",
-          message: "Account ID is required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Parse and validate account ID as positive integer
-    let accountId: number;
-    try {
-      accountId = parseInt(accountIdParam, 10);
-
-      // Validate that it's a positive integer
-      if (isNaN(accountId) || accountId <= 0 || !Number.isInteger(accountId)) {
-        throw new Error("Invalid format");
-      }
-    } catch {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_ACCOUNT_ID",
-          message: "Invalid account ID format. Must be a positive integer",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // Validate account ID from path parameters
+    const accountIdResult = validateAccountId(params.id);
+    if (!accountIdResult.success) return accountIdResult.response;
 
     // Initialize AccountService with Supabase client from middleware
     const accountService = new AccountService(locals.supabase);
 
     // Soft delete the account and related transactions
     try {
-      await accountService.softDeleteAccount(accountId, locals.user.id);
+      await accountService.softDeleteAccount(accountIdResult.accountId, authResult.user.id);
     } catch (error) {
       // Handle specific error cases
       if (error instanceof Error) {
         // Account not found or access denied
         if (error.message === "ACCOUNT_NOT_FOUND") {
-          const errorResponse: ApiErrorResponse = {
-            error: {
-              code: "ACCOUNT_NOT_FOUND",
-              message: "Account not found or access denied",
-            },
-          };
-          return new Response(JSON.stringify(errorResponse), {
-            status: 404,
-            headers: { "Content-Type": "application/json" },
-          });
+          return createErrorResponse("ACCOUNT_NOT_FOUND", "Account not found or access denied", 404);
         }
 
         // Database-related errors
         if (error.message.includes("Failed to")) {
-          const errorResponse: ApiErrorResponse = {
-            error: {
-              code: "DATABASE_ERROR",
-              message: "Failed to delete account",
-            },
-          };
-          return new Response(JSON.stringify(errorResponse), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
+          return createErrorResponse("DATABASE_ERROR", "Failed to delete account", 500);
         }
       }
 
       // Generic database error
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "DATABASE_ERROR",
-          message: "Internal server error",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("DATABASE_ERROR", "Internal server error", 500);
     }
 
     // Return 204 No Content on successful deletion
@@ -467,15 +274,6 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     });
   } catch {
     // Generic internal server error for any unexpected errors
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
-      },
-    };
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorResponse("INTERNAL_ERROR", "An unexpected error occurred", 500);
   }
 };

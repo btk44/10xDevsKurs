@@ -1,9 +1,66 @@
 import type { APIContext } from "astro";
 import { CategoryService } from "../../../lib/services/CategoryService";
 import { UpdateCategoryCommandSchema, IdParamSchema } from "../../../lib/validation/schemas";
-import type { ApiResponse, ApiErrorResponse, CategoryDTO, UpdateCategoryCommand } from "../../../types";
+import type { ApiErrorResponse, CategoryDTO, UpdateCategoryCommand, ValidationErrorDetail } from "../../../types";
 
 export const prerender = false;
+
+// Helper functions for common API operations
+function ensureAuthenticated(locals: App.Locals) {
+  if (!locals.user) {
+    return {
+      success: false,
+      response: createErrorResponse("UNAUTHENTICATED", "Authentication required", 401),
+    } as const;
+  }
+  return { success: true, user: locals.user } as const;
+}
+
+function createErrorResponse(
+  code: string,
+  message: string,
+  status: number,
+  details?: ValidationErrorDetail[] | Record<string, unknown>
+): Response {
+  const errorResponse: ApiErrorResponse = {
+    error: {
+      code,
+      message,
+      ...(details && { details }),
+    },
+  };
+  return new Response(JSON.stringify(errorResponse), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function createSuccessResponse<T>(data: T, status = 200): Response {
+  const response = { data };
+  return new Response(JSON.stringify(response), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate", // Prevent caching for user-specific data
+    },
+  });
+}
+
+function validateCategoryId(params: APIContext["params"]) {
+  const idValidation = IdParamSchema.safeParse(params.id);
+  if (!idValidation.success) {
+    return {
+      success: false,
+      response: createErrorResponse("INVALID_CATEGORY_ID", "Category ID must be a positive integer", 400, [
+        {
+          field: "id",
+          message: "Category ID must be a positive integer",
+        },
+      ]),
+    } as const;
+  }
+  return { success: true, categoryId: idValidation.data } as const;
+}
 
 /**
  * GET /api/categories/:id - Retrieve a single category
@@ -12,135 +69,59 @@ export const prerender = false;
 export async function GET({ params, locals }: APIContext): Promise<Response> {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
     // Validate path parameter (category ID)
-    const idValidation = IdParamSchema.safeParse(params.id);
-    if (!idValidation.success) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_CATEGORY_ID",
-          message: "Category ID must be a positive integer",
-          details: [
-            {
-              field: "id",
-              message: "Category ID must be a positive integer",
-            },
-          ],
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const categoryId = idValidation.data;
+    const idValidation = validateCategoryId(params);
+    if (!idValidation.success) return idValidation.response;
 
     // Create category service instance
     const categoryService = new CategoryService(locals.supabase);
 
     // Retrieve the category
-    const category: CategoryDTO | null = await categoryService.getCategoryById(categoryId, locals.user.id);
+    const category: CategoryDTO | null = await categoryService.getCategoryById(
+      idValidation.categoryId,
+      authResult.user.id
+    );
 
     // Handle category not found
     if (!category) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "CATEGORY_NOT_FOUND",
-          message: `Category with ID ${categoryId} not found`,
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("CATEGORY_NOT_FOUND", `Category with ID ${idValidation.categoryId} not found`, 404);
     }
 
     // Return success response
-    const successResponse: ApiResponse<CategoryDTO> = {
-      data: category,
-    };
-
-    return new Response(JSON.stringify(successResponse), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache, no-store, must-revalidate", // Prevent caching for user-specific data
-      },
-    });
+    return createSuccessResponse(category);
   } catch (error) {
     // Handle specific service errors
     if (error instanceof Error) {
       // Database connection or Supabase errors
       if (error.message.includes("Failed to retrieve category") || error.message.includes("Database")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "DATABASE_ERROR",
-            message: "Unable to retrieve category at this time",
-            details: { message: "Database operation failed" },
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
+        return createErrorResponse("DATABASE_ERROR", "Unable to retrieve category at this time", 503, {
+          message: "Database operation failed",
         });
       }
 
       // Authentication errors
       if (error.message.includes("JWT") || error.message.includes("auth")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "AUTHENTICATION_ERROR",
-            message: "Authentication failed",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("AUTHENTICATION_ERROR", "Authentication failed", 401);
       }
 
       // Invalid user ID
       if (error.message.includes("Valid user ID is required")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "INVALID_USER_ID",
-            message: "Invalid user identification",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("INVALID_USER_ID", "Invalid user identification", 401);
       }
     }
 
     // Handle unexpected errors
     // TODO: Replace with proper logging service in production
     // console.error("Unexpected error in GET /api/categories/:id:", error);
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
-        details: error instanceof Error ? { message: error.message } : undefined,
-      },
-    };
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorResponse(
+      "INTERNAL_ERROR",
+      "An unexpected error occurred",
+      500,
+      error instanceof Error ? { message: error.message } : undefined
+    );
   }
 }
 
@@ -151,41 +132,12 @@ export async function GET({ params, locals }: APIContext): Promise<Response> {
 export async function PATCH({ params, request, locals }: APIContext): Promise<Response> {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
     // Validate path parameter (category ID)
-    const idValidation = IdParamSchema.safeParse(params.id);
-    if (!idValidation.success) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_CATEGORY_ID",
-          message: "Category ID must be a positive integer",
-          details: [
-            {
-              field: "id",
-              message: "Category ID must be a positive integer",
-            },
-          ],
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const categoryId = idValidation.data;
+    const idValidation = validateCategoryId(params);
+    if (!idValidation.success) return idValidation.response;
 
     // Parse and validate request body
     const body = await request.json();
@@ -221,17 +173,7 @@ export async function PATCH({ params, request, locals }: APIContext): Promise<Re
         };
       });
 
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid request data provided",
-          details,
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorResponse("VALIDATION_ERROR", "Invalid request data provided", 400, details);
     }
 
     // Create category service instance
@@ -239,212 +181,103 @@ export async function PATCH({ params, request, locals }: APIContext): Promise<Re
 
     // Update the category
     const updatedCategory: CategoryDTO = await categoryService.updateCategory(
-      categoryId,
+      idValidation.categoryId,
       validation.data as UpdateCategoryCommand,
-      locals.user.id
+      authResult.user.id
     );
 
     // Return success response
-    const successResponse: ApiResponse<CategoryDTO> = {
-      data: updatedCategory,
-    };
-
-    return new Response(JSON.stringify(successResponse), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache, no-store, must-revalidate", // Prevent caching for user-specific data
-      },
-    });
+    return createSuccessResponse(updatedCategory);
   } catch (error) {
     // Handle specific business logic errors
     if (error instanceof Error) {
       // Category not found or access denied
       if (error.message.includes("Category not found") || error.message.includes("access denied")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "CATEGORY_NOT_FOUND",
-            message: "Category not found or access denied",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("CATEGORY_NOT_FOUND", "Category not found or access denied", 404);
       }
 
       // Parent category validation errors
       if (error.message.includes("Parent category does not exist")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Validation failed",
-            details: [
-              {
-                field: "parent_id",
-                message: "Parent category does not exist or is not active",
-              },
-            ],
+        return createErrorResponse("VALIDATION_ERROR", "Validation failed", 400, [
+          {
+            field: "parent_id",
+            message: "Parent category does not exist or is not active",
           },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        ]);
       }
 
       // Hierarchy depth violations
       if (error.message.includes("Maximum category depth")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "INVALID_CATEGORY_HIERARCHY",
-            message: "Maximum category depth is 2 levels",
-            details: [
-              {
-                field: "parent_id",
-                message: "Parent category is already a subcategory",
-              },
-            ],
+        return createErrorResponse("INVALID_CATEGORY_HIERARCHY", "Maximum category depth is 2 levels", 400, [
+          {
+            field: "parent_id",
+            message: "Parent category is already a subcategory",
           },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        ]);
       }
 
       // Category type mismatch
       if (error.message.includes("type must match parent")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "TYPE_MISMATCH_ERROR",
+        return createErrorResponse("TYPE_MISMATCH_ERROR", "Subcategory type must match parent category type", 400, [
+          {
+            field: "category_type",
             message: "Subcategory type must match parent category type",
-            details: [
-              {
-                field: "category_type",
-                message: "Subcategory type must match parent category type",
-              },
-            ],
           },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        ]);
       }
 
       // Self-referencing parent
       if (error.message.includes("cannot be its own parent")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Validation failed",
-            details: [
-              {
-                field: "parent_id",
-                message: "Category cannot be its own parent",
-              },
-            ],
+        return createErrorResponse("VALIDATION_ERROR", "Validation failed", 400, [
+          {
+            field: "parent_id",
+            message: "Category cannot be its own parent",
           },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        ]);
       }
 
       // Name uniqueness violations
       if (error.message.includes("category with this name already exists")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Validation failed",
-            details: [
-              {
-                field: "name",
-                message: "A category with this name already exists in the same location",
-              },
-            ],
+        return createErrorResponse("VALIDATION_ERROR", "Validation failed", 400, [
+          {
+            field: "name",
+            message: "A category with this name already exists in the same location",
           },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        ]);
       }
 
       // Database connection or Supabase errors
       if (error.message.includes("Failed to update category") || error.message.includes("Database")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "DATABASE_ERROR",
-            message: "Unable to update category at this time",
-            details: { message: "Database operation failed" },
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
+        return createErrorResponse("DATABASE_ERROR", "Unable to update category at this time", 503, {
+          message: "Database operation failed",
         });
       }
 
       // Authentication errors
       if (error.message.includes("JWT") || error.message.includes("auth")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "AUTHENTICATION_ERROR",
-            message: "Authentication failed",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("AUTHENTICATION_ERROR", "Authentication failed", 401);
       }
 
       // Invalid user ID
       if (error.message.includes("Valid user ID is required")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "INVALID_USER_ID",
-            message: "Invalid user identification",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("INVALID_USER_ID", "Invalid user identification", 401);
       }
 
       // Invalid category ID
       if (error.message.includes("Valid category ID is required")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "INVALID_CATEGORY_ID",
-            message: "Category ID must be a positive integer",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("INVALID_CATEGORY_ID", "Category ID must be a positive integer", 400);
       }
     }
 
     // Handle unexpected errors
     // TODO: Replace with proper logging service in production
     // console.error("Unexpected error in PATCH /api/categories/:id:", error);
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
-        details: error instanceof Error ? { message: error.message } : undefined,
-      },
-    };
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorResponse(
+      "INTERNAL_ERROR",
+      "An unexpected error occurred",
+      500,
+      error instanceof Error ? { message: error.message } : undefined
+    );
   }
 }
 
@@ -455,47 +288,18 @@ export async function PATCH({ params, request, locals }: APIContext): Promise<Re
 export async function DELETE({ params, locals }: APIContext): Promise<Response> {
   try {
     // Ensure user is authenticated
-    if (!locals.user) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "Authentication required",
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authResult = ensureAuthenticated(locals);
+    if (!authResult.success) return authResult.response;
 
     // Validate path parameter (category ID)
-    const idValidation = IdParamSchema.safeParse(params.id);
-    if (!idValidation.success) {
-      const errorResponse: ApiErrorResponse = {
-        error: {
-          code: "INVALID_CATEGORY_ID",
-          message: "Category ID must be a positive integer",
-          details: [
-            {
-              field: "id",
-              message: "Category ID must be a positive integer",
-            },
-          ],
-        },
-      };
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const categoryId = idValidation.data;
+    const idValidation = validateCategoryId(params);
+    if (!idValidation.success) return idValidation.response;
 
     // Create category service instance
     const categoryService = new CategoryService(locals.supabase);
 
     // Delete the category (soft delete)
-    await categoryService.deleteCategory(categoryId, locals.user.id);
+    await categoryService.deleteCategory(idValidation.categoryId, authResult.user.id);
 
     // Return success response (204 No Content)
     return new Response(null, {
@@ -506,16 +310,7 @@ export async function DELETE({ params, locals }: APIContext): Promise<Response> 
     if (error instanceof Error) {
       // Category not found or access denied
       if (error.message.includes("Category not found") || error.message.includes("access denied")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "CATEGORY_NOT_FOUND",
-            message: "Category not found",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("CATEGORY_NOT_FOUND", "Category not found", 404);
       }
 
       // Category has active transactions (conflict)
@@ -524,18 +319,8 @@ export async function DELETE({ params, locals }: APIContext): Promise<Response> 
         const match = error.message.match(/(\d+) transaction\(s\) found/);
         const transactionCount = match ? parseInt(match[1], 10) : 0;
 
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "CATEGORY_IN_USE",
-            message: "Cannot delete category with active transactions",
-            details: {
-              transaction_count: transactionCount,
-            },
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 409,
-          headers: { "Content-Type": "application/json" },
+        return createErrorResponse("CATEGORY_IN_USE", "Cannot delete category with active transactions", 409, {
+          transaction_count: transactionCount,
         });
       }
 
@@ -545,75 +330,35 @@ export async function DELETE({ params, locals }: APIContext): Promise<Response> 
         error.message.includes("Failed to check category usage") ||
         error.message.includes("Database")
       ) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "DATABASE_ERROR",
-            message: "Unable to delete category at this time",
-            details: { message: "Database operation failed" },
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
+        return createErrorResponse("DATABASE_ERROR", "Unable to delete category at this time", 503, {
+          message: "Database operation failed",
         });
       }
 
       // Authentication errors
       if (error.message.includes("JWT") || error.message.includes("auth")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "AUTHENTICATION_ERROR",
-            message: "Authentication failed",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("AUTHENTICATION_ERROR", "Authentication failed", 401);
       }
 
       // Invalid user ID
       if (error.message.includes("Valid user ID is required")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "INVALID_USER_ID",
-            message: "Invalid user identification",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("INVALID_USER_ID", "Invalid user identification", 401);
       }
 
       // Invalid category ID
       if (error.message.includes("Valid category ID is required")) {
-        const errorResponse: ApiErrorResponse = {
-          error: {
-            code: "INVALID_CATEGORY_ID",
-            message: "Category ID must be a positive integer",
-          },
-        };
-        return new Response(JSON.stringify(errorResponse), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        });
+        return createErrorResponse("INVALID_CATEGORY_ID", "Category ID must be a positive integer", 400);
       }
     }
 
     // Handle unexpected errors
     // TODO: Replace with proper logging service in production
     // console.error("Unexpected error in DELETE /api/categories/:id:", error);
-    const errorResponse: ApiErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred",
-        details: error instanceof Error ? { message: error.message } : undefined,
-      },
-    };
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorResponse(
+      "INTERNAL_ERROR",
+      "An unexpected error occurred",
+      500,
+      error instanceof Error ? { message: error.message } : undefined
+    );
   }
 }

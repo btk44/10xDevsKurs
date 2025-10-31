@@ -751,12 +751,12 @@ export class TransactionService {
    * @param supabase - Supabase client instance
    * @throws Error if transaction not found, access denied, or database operation fails
    */
-  static async deleteTransaction(id: number, userId: string, supabase: typeof supabaseClient): Promise<void> {
+  async deleteTransaction(id: number, userId: string): Promise<void> {
     // Input validation
     SecurityUtils.validateNumericId(id, "transaction ID");
 
     // First check if transaction exists and is owned by user
-    const { data: existingTransaction, error: fetchError } = await supabase
+    const { data: existingTransaction, error: fetchError } = await this.supabase
       .from("transactions")
       .select("id, user_id, active")
       .eq("id", id)
@@ -776,7 +776,7 @@ export class TransactionService {
     }
 
     // Perform soft delete
-    const { error: updateError } = await supabase
+    const { error: updateError } = await this.supabase
       .from("transactions")
       .update({
         active: false,
