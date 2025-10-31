@@ -86,7 +86,7 @@ In the project directory, you can run:
 ### In Scope (MVP)
 
 - Responsive web application accessible on modern browsers
-- User registration, login, and password reset via Supabase
+- User registration, login, ~~and password reset~~ via Supabase
 - Secure storage of user data (accounts, categories, transactions)
 - CRUD operations for:
   - **Accounts** (name, currency; real-time balance)
