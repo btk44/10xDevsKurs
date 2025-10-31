@@ -77,16 +77,11 @@ export default function RegisterForm() {
         return;
       }
 
-      if (data.requiresEmailConfirmation) {
-        setSuccessMessage("Registration successful! Please check your email to confirm your account.");
-        // Clear form
-        setEmail("");
-        setPassword("");
-        setConfirmPassword("");
-      } else {
-        // Redirect to the main page on successful registration
-        window.location.href = "/";
-      }
+      setSuccessMessage("Registration successful! Please check your email to confirm your account.");
+      // Clear form
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
     } catch (err) {
       setErrors({
         general: "An unexpected error occurred. Please try again later.",
